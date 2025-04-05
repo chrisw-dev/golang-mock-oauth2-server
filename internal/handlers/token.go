@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -84,7 +85,12 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Return token response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tokenResponse)
+	if err := json.NewEncoder(w).Encode(tokenResponse); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		// Log the error for debugging purposes
+		log.Printf("Error encoding token response: %v", err)
+		return
+	}
 }
 
 // Helper function to generate a mock access token

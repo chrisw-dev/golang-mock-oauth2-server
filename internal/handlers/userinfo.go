@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
@@ -26,5 +27,10 @@ func (h *UserInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(userInfo)
+	if err := json.NewEncoder(w).Encode(userInfo); err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		// Log the error for debugging purposes
+		log.Printf("Error encoding user info response: %v", err)
+		return
+	}
 }

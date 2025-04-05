@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
@@ -91,7 +92,10 @@ func (h *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		// Since we've already written the header, we can only log the error
+		log.Printf("Error encoding config response: %v", err)
+	}
 }
 
 // storeTokenConfig saves token configuration to the store
