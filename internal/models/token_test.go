@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"testing"
+	"time"
 )
 
 func TestTokenResponseMarshaling(t *testing.T) {
@@ -76,6 +77,8 @@ func TestAuthRequestFields(t *testing.T) {
 		name        string
 		clientID    string
 		redirectURI string
+		scope       string
+		expiration  time.Time
 	}{
 		{
 			name:        "Standard values",
@@ -97,6 +100,13 @@ func TestAuthRequestFields(t *testing.T) {
 			clientID:    "",
 			redirectURI: "",
 		},
+		{
+			name:        "With Scope and Expiration",
+			clientID:    "client-123",
+			redirectURI: "https://example.com/callback",
+			scope:       "openid profile",
+			expiration:  time.Now().Add(10 * time.Minute),
+		},
 	}
 
 	for _, tc := range testCases {
@@ -104,6 +114,8 @@ func TestAuthRequestFields(t *testing.T) {
 			authReq := AuthRequest{
 				ClientID:    tc.clientID,
 				RedirectURI: tc.redirectURI,
+				Scope:       tc.scope,
+				Expiration:  tc.expiration,
 			}
 
 			// Verify the fields were set correctly
@@ -112,6 +124,12 @@ func TestAuthRequestFields(t *testing.T) {
 			}
 			if authReq.RedirectURI != tc.redirectURI {
 				t.Errorf("RedirectURI field not set correctly. Got: %s, Want: %s", authReq.RedirectURI, tc.redirectURI)
+			}
+			if authReq.Scope != tc.scope {
+				t.Errorf("Scope field not set correctly. Got: %s, Want: %s", authReq.Scope, tc.scope)
+			}
+			if !authReq.Expiration.Equal(tc.expiration) {
+				t.Errorf("Expiration field not set correctly. Got: %v, Want: %v", authReq.Expiration, tc.expiration)
 			}
 		})
 	}

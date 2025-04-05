@@ -15,14 +15,14 @@ func TestOAuthFlow(t *testing.T) {
 	mockServer := server.NewServer(":0") // Use port 0 to get a random available port
 
 	// Start server in a goroutine
-	ts := httptest.NewServer(mockServer.Handler())
+	ts := httptest.NewServer(mockServer.Handler)
 	defer ts.Close()
 
 	// Create OAuth2 config pointing to test server
 	oauth2Config := &oauth2.Config{
 		ClientID:     "test-client-id",
 		ClientSecret: "test-client-secret",
-		RedirectURL:  "http://localhost/callback",
+		RedirectURL:  ts.URL + "/callback",
 		Scopes:       []string{"openid", "email", "profile"},
 		Endpoint: oauth2.Endpoint{
 			AuthURL:  ts.URL + "/authorize",
@@ -31,8 +31,16 @@ func TestOAuthFlow(t *testing.T) {
 	}
 
 	// Test the authorization URL
-	authURL := oauth2Config.AuthCodeURL("test-state")
-	resp, err := http.Get(authURL)
+	authURL := oauth2Config.AuthCodeURL("test-state", oauth2.AccessTypeOffline)
+
+	// Create a client that doesn't follow redirects
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(authURL)
 	if err != nil {
 		t.Fatalf("Failed to get auth URL: %v", err)
 	}

@@ -1,4 +1,6 @@
 # Mock Google OAuth2 Server
+
+![CI Status](https://github.com/chrisw-dev/golang-mock-oauth2-server/actions/workflows/ci.yml/badge.svg)
 A lightweight server written in Go that simulates Google's OAuth2 authentication endpoints for development and testing purposes.
 
 ## Overview

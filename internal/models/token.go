@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // TokenResponse represents an OAuth2 token response
 type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
@@ -13,5 +15,7 @@ type TokenResponse struct {
 type AuthRequest struct {
 	ClientID    string
 	RedirectURI string
+	Scope       string
+	Expiration  time.Time
 	// Other fields as needed...
 }
