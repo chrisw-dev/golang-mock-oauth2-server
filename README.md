@@ -3,6 +3,8 @@
 ![CI Status](https://github.com/chrisw-dev/golang-mock-oauth2-server/actions/workflows/ci.yml/badge.svg)
 A lightweight server written in Go that simulates Google's OAuth2 authentication endpoints for development and testing purposes.
 
+> **WARNING**: This server is intended for development and testing purposes only. It should never be used in production environments as it does not implement proper security measures required for real OAuth2 authentication.
+
 ## Overview
 This mock server recreates Google's OAuth2 flow without requiring an internet connection or real Google credentials. It implements the following endpoints:
 
