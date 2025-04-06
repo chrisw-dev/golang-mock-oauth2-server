@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// AuthorizeHandler handles OAuth2 authorization requests
 type AuthorizeHandler struct {
 	Store *store.MemoryStore
 }

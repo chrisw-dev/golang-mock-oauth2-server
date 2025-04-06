@@ -51,7 +51,7 @@ func (s *MemoryStore) StoreAuthCode(code string, request *models.AuthRequest) {
 	s.authCodes[code] = request
 }
 
-// Reverted `GetAuthCode` to return both `*models.AuthRequest` and a boolean.
+// GetAuthCode retrieves an authorization code by its value
 func (s *MemoryStore) GetAuthCode(code string) (*models.AuthRequest, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

@@ -7,10 +7,12 @@ import (
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
+// Server represents an OAuth2 mock server
 type Server struct {
 	Handler http.Handler
 }
 
+// NewServer creates a new OAuth2 server instance with configured routes
 func NewServer(addr string) *Server {
 	store := store.NewMemoryStore()
 	authorizeHandler := &handlers.AuthorizeHandler{Store: store}

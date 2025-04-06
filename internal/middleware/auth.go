@@ -12,17 +12,21 @@ import (
 type ContextKey string
 
 const (
+	// ContextKeyUserInfo is the context key used to store user information
 	ContextKeyUserInfo ContextKey = "userInfo"
 )
 
+// AuthMiddleware provides authentication middleware for the API
 type AuthMiddleware struct {
 	Store *store.MemoryStore
 }
 
+// NewAuthMiddleware creates a new authentication middleware instance
 func NewAuthMiddleware(store *store.MemoryStore) *AuthMiddleware {
 	return &AuthMiddleware{Store: store}
 }
 
+// ValidateToken is a middleware that validates the Bearer token in the Authorization header
 func (a *AuthMiddleware) ValidateToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")

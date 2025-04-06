@@ -84,7 +84,7 @@ func (u *UserInfo) Merge(other *UserInfo) {
 	}
 }
 
-// UpdateFromConfig updates user info from a configuration struct
+// UpdateUserFromConfig updates user info from a configuration map
 // This will be used by the /config endpoint to modify user data dynamically
 func UpdateUserFromConfig(user *UserInfo, config map[string]interface{}) {
 	if config == nil {

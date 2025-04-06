@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+// ServerConfig holds configuration parameters for the OAuth2 server
 type ServerConfig struct {
 	Port            int
 	MockUserEmail   string
@@ -21,7 +22,7 @@ var defaultConfig = ServerConfig{
 	MockTokenExpiry: 3600,
 }
 
-// Updated to avoid copying the lock value by using a pointer to `ServerConfig`.
+// LoadConfig loads server configuration from environment variables or returns defaults
 func LoadConfig() *ServerConfig {
 	config := &defaultConfig
 
@@ -48,6 +49,7 @@ func LoadConfig() *ServerConfig {
 	return config
 }
 
+// UpdateConfig updates the server configuration with values from the provided map
 func (c *ServerConfig) UpdateConfig(newConfig map[string]interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -66,7 +68,7 @@ func (c *ServerConfig) UpdateConfig(newConfig map[string]interface{}) {
 	}
 }
 
-// Updated `GetConfig` to return a new struct without the mutex field.
+// GetConfig returns a copy of the current server configuration without the mutex
 func (c *ServerConfig) GetConfig() ServerConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
