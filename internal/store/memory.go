@@ -1,6 +1,7 @@
 package store
 
 import (
+	"log"
 	"sync"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
@@ -145,23 +146,64 @@ func (s *MemoryStore) GetUserInfoByToken(token string) (*models.UserInfo, bool) 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
+	if len(token) > 4 {
+		log.Printf("Store: Looking up token: %s...", token[:4])
+	} else {
+		log.Printf("Store: Looking up token (short token)")
+	}
+
 	clientID, exists := s.tokens[token]
 	if !exists {
+		log.Printf("Store: Token not found in tokens map")
 		return nil, false
 	}
+	log.Printf("Store: Found clientID for token: %s", clientID)
 
-	authRequest, exists := s.authCodes[clientID]
-	if !exists {
-		return nil, false
-	}
+	// Instead of trying to look up the auth request (which is removed after token exchange),
+	// we'll generate a user info object directly from the clientID
 
-	// Transform AuthRequest into UserInfo
+	// Extract the base clientID (removing any prefixes/suffixes added by token generation)
+	baseClientID := clientID
+
+	// Generate a default user info
 	userInfo := &models.UserInfo{
-		Sub:           clientID,                              // Using clientID as a unique identifier
-		Name:          "Generated User",                      // Placeholder name
-		Email:         authRequest.ClientID + "@example.com", // Placeholder email
-		EmailVerified: true,                                  // Default to verified
+		Sub:           baseClientID,
+		Name:          "Test User",
+		GivenName:     "Test",
+		FamilyName:    "User",
+		Email:         baseClientID + "@example.com",
+		Picture:       "https://example.com/photo.jpg",
+		EmailVerified: true,
 	}
 
+	// Check if we have custom user info configuration
+	if userInfoConfig, ok := s.tokenConfig["user_info"].(map[string]interface{}); ok {
+		log.Printf("Store: Found custom user info configuration")
+
+		// Override default values with configured ones
+		if sub, ok := userInfoConfig["sub"].(string); ok {
+			userInfo.Sub = sub
+		}
+		if name, ok := userInfoConfig["name"].(string); ok {
+			userInfo.Name = name
+		}
+		if email, ok := userInfoConfig["email"].(string); ok {
+			userInfo.Email = email
+		}
+		if verified, ok := userInfoConfig["email_verified"].(bool); ok {
+			userInfo.EmailVerified = verified
+		}
+		if givenName, ok := userInfoConfig["given_name"].(string); ok {
+			userInfo.GivenName = givenName
+		}
+		if familyName, ok := userInfoConfig["family_name"].(string); ok {
+			userInfo.FamilyName = familyName
+		}
+		if picture, ok := userInfoConfig["picture"].(string); ok {
+			userInfo.Picture = picture
+		}
+	}
+
+	log.Printf("Store: Generated user info with email: %s", userInfo.Email)
 	return userInfo, true
 }

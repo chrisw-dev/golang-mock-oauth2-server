@@ -46,6 +46,118 @@ go build -o mock-oauth2-server
 ./mock-oauth2-server -port 9000
 ```
 
+## Running with Docker
+
+This project includes a Dockerfile that can be used to build and run the server in a container.
+
+### Using GitHub Container Registry
+
+The mock OAuth2 server is available as a pre-built Docker image from GitHub Container Registry (GHCR). This allows you to use the server without building it yourself.
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/chrisw-dev/golang-mock-oauth2-server:latest
+
+# Run the container
+docker run -p 8080:8080 ghcr.io/chrisw-dev/golang-mock-oauth2-server:latest
+```
+
+The following image tags are available:
+- `latest` - The most recent build from the main branch
+- `x.y.z` - Specific version (e.g., `1.0.0`)
+- `x.y` - Latest patch version of a specific minor version (e.g., `1.0`)
+- `sha-abcdef` - Specific commit SHA
+
+You can also use the image in your Docker Compose file:
+
+```yaml
+version: '3'
+
+services:
+  mock-oauth2:
+    image: ghcr.io/chrisw-dev/golang-mock-oauth2-server:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - MOCK_USER_EMAIL=custom@example.com
+      - MOCK_USER_NAME=Custom User
+```
+
+If you're using the image in a private environment, you may need to authenticate with GitHub Container Registry:
+
+```bash
+# Login to GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+```
+
+### Using Docker
+
+```bash
+# Build the Docker image
+docker build -t mock-oauth2-server .
+
+# Run the container
+docker run -p 8080:8080 mock-oauth2-server
+```
+
+### Using Docker Compose
+
+For a more convenient setup, you can use Docker Compose. Create a `docker-compose.yml` file with the following content:
+
+```yaml
+version: '3'
+
+services:
+  mock-oauth2:
+    build: .
+    container_name: mock-oauth2-server
+    ports:
+      - "8080:8080"
+    environment:
+      - MOCK_OAUTH_PORT=8080
+      - MOCK_USER_EMAIL=testuser@example.com
+      - MOCK_USER_NAME=Test User
+      - MOCK_TOKEN_EXPIRY=3600
+    # Mount a volume for custom fixtures if needed
+    # volumes:
+    #   - ./test/fixtures:/app/test/fixtures
+    restart: unless-stopped
+
+  # Example of how to integrate with your application
+  # your-app:
+  #   image: your-application-image
+  #   container_name: your-app
+  #   depends_on:
+  #     - mock-oauth2
+  #   environment:
+  #     - OAUTH_AUTH_URL=http://mock-oauth2:8080/authorize
+  #     - OAUTH_TOKEN_URL=http://mock-oauth2:8080/token
+  #     - OAUTH_USERINFO_URL=http://mock-oauth2:8080/userinfo
+  #   ports:
+  #     - "8081:8081"
+```
+
+Then run:
+
+```bash
+# Start the services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the services
+docker-compose down
+```
+
+This setup allows you to:
+- Configure the mock server using environment variables
+- Integrate it with your application in the same Docker network
+- Access the mock server endpoints from your host at http://localhost:8080
+- Access the mock server from other containers using the service name (e.g., http://mock-oauth2:8080)
+
+> **REMINDER**: This server is for testing purposes only and should not be used in production environments.
+
 ## Architecture
 The mock OAuth2 server is designed with a modular architecture that separates concerns and makes the codebase maintainable and extensible.
 
@@ -286,3 +398,5 @@ oauth2Config := &oauth2.Config{
 1. HTTP tests: Use httptest package to test handlers
 1. Config tests: Test different server configurations
 1. Error handling: Test error scenarios using the /config endpoint
+
+
