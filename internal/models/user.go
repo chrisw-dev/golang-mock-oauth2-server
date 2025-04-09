@@ -5,6 +5,7 @@ package models
 type UserInfo struct {
 	// Standard OpenID Connect fields
 	Sub           string `json:"sub"`            // Subject identifier - unique ID for the user
+	ID            string `json:"id"`             // Google's user ID (sometimes returned instead of or alongside sub)
 	Name          string `json:"name"`           // Full name
 	GivenName     string `json:"given_name"`     // First name
 	FamilyName    string `json:"family_name"`    // Last name
@@ -21,6 +22,7 @@ type UserInfo struct {
 func NewDefaultUser() *UserInfo {
 	return &UserInfo{
 		Sub:           "123456789",
+		ID:            "123456789", // Setting ID to match Sub by default
 		Name:          "Test User",
 		GivenName:     "Test",
 		FamilyName:    "User",
@@ -38,6 +40,7 @@ func (u *UserInfo) Clone() *UserInfo {
 
 	return &UserInfo{
 		Sub:           u.Sub,
+		ID:            u.ID,
 		Name:          u.Name,
 		GivenName:     u.GivenName,
 		FamilyName:    u.FamilyName,
@@ -57,6 +60,9 @@ func (u *UserInfo) Merge(other *UserInfo) {
 
 	if other.Sub != "" {
 		u.Sub = other.Sub
+	}
+	if other.ID != "" {
+		u.ID = other.ID
 	}
 	if other.Name != "" {
 		u.Name = other.Name
@@ -94,6 +100,9 @@ func UpdateUserFromConfig(user *UserInfo, config map[string]interface{}) {
 	// Update fields from the config map
 	if sub, ok := config["sub"].(string); ok {
 		user.Sub = sub
+	}
+	if id, ok := config["id"].(string); ok {
+		user.ID = id
 	}
 	if name, ok := config["name"].(string); ok {
 		user.Name = name

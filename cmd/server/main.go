@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,11 +14,32 @@ import (
 )
 
 func main() {
+	// Define command-line flags
+	var port int
+	flag.IntVar(&port, "port", 0, "Port to run the server on (default: uses MOCK_OAUTH_PORT env var or 8080)")
+	flag.Parse()
+
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	// Initialize in-memory store
+	// Default port is 8080
+	serverPort := 8080
+
+	// Check environment variable first (using config to access env vars consistently)
+	if cfg.Port > 0 {
+		serverPort = cfg.Port
+	}
+
+	// Command-line flag overrides environment variable
+	if port > 0 {
+		serverPort = port
+	}
+
+	// Initialize in-memory store with configuration
 	memoryStore := store.NewMemoryStore()
+
+	// Set up default user using configuration
+	defaultUser := models.NewDefaultUser()
 
 	// Create a new ServeMux
 	mux := http.NewServeMux()
@@ -26,10 +48,10 @@ func main() {
 	mux.Handle("/authorize", &handlers.AuthorizeHandler{Store: memoryStore})
 	mux.Handle("/token", handlers.NewTokenHandler(memoryStore))
 	mux.Handle("/userinfo", &handlers.UserInfoHandler{Store: memoryStore})
-	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, models.NewDefaultUser()))
+	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, defaultUser))
 
 	// Start the server with the custom ServeMux
-	startServer(cfg.Port, mux)
+	startServer(serverPort, mux)
 }
 
 func startServer(port int, handler http.Handler) {

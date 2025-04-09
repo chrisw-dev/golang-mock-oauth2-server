@@ -168,6 +168,7 @@ func (s *MemoryStore) GetUserInfoByToken(token string) (*models.UserInfo, bool) 
 	// Generate a default user info
 	userInfo := &models.UserInfo{
 		Sub:           baseClientID,
+		ID:            "1234",
 		Name:          "Test User",
 		GivenName:     "Test",
 		FamilyName:    "User",

@@ -33,7 +33,7 @@ cd golang-mock-oauth2-server
 go mod download
 
 # Build the server
-go build -o mock-oauth2-server
+go build -o mock-oauth2-server ./cmd/server
 ```
 
 ## Running the Server
@@ -42,8 +42,11 @@ go build -o mock-oauth2-server
 # Start with default settings (port 8080)
 ./mock-oauth2-server
 
-# Specify a custom port
-./mock-oauth2-server -port 9000
+# Specify a custom port using the command-line flag (highest priority)
+./mock-oauth2-server --port 9088
+
+# Specify a custom port using environment variable (used if no command-line flag is provided)
+MOCK_OAUTH_PORT=9088 ./mock-oauth2-server
 ```
 
 ## Running with Docker
@@ -357,12 +360,23 @@ This enables testing scenarios like:
 
 ### Configuration
 
-The server can be configured by setting environment variables:
+The server can be configured through multiple methods, with the following precedence order (highest to lowest):
 
-MOCK_OAUTH_PORT - Server port (default: 8080)
-MOCK_USER_EMAIL - Email for the mock user (default: testuser@example.com)
-MOCK_USER_NAME - Name for the mock user (default: Test User)
-MOCK_TOKEN_EXPIRY - Token expiry in seconds (default: 3600)
+1. Command-line flags (highest priority)
+2. Environment variables
+3. Default values (lowest priority)
+
+Available configuration options:
+
+- Port:
+  - Command-line: `--port 9088`
+  - Environment: `MOCK_OAUTH_PORT=9088`
+  - Default: `8080`
+
+- Other settings (environment variables only):
+  - `MOCK_USER_EMAIL` - Email for the mock user (default: testuser@example.com)
+  - `MOCK_USER_NAME` - Name for the mock user (default: Test User)
+  - `MOCK_TOKEN_EXPIRY` - Token expiry in seconds (default: 3600)
 
 ### Example Usage
 
