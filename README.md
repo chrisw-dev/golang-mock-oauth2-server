@@ -321,16 +321,17 @@ Allows test code to dynamically configure the responses returned by the OAuth2 e
 
 ```json
 {
-  "user_info": {
-    "sub": "custom-id-123",
-    "name": "Custom Test User",
-    "email": "custom@example.com",
-    "email_verified": false
-  },
   "tokens": {
     "access_token": "custom-access-token",
     "id_token": "custom-id-token",
-    "expires_in": 1800
+    "expires_in": 1800,
+    "user_info": {
+      "sub": "custom-id-456",
+      "name": "Updated Test User",
+      "email": "updated@example.com",
+      "email_verified": true,
+      "picture": "https://example.com/updated.jpg"
+    }
   },
   "error_scenario": {
     "endpoint": "token", 
@@ -349,14 +350,14 @@ Allows test code to dynamically configure the responses returned by the OAuth2 e
 }
 ```
 
+**IMPORTANT**: To update user information that will be returned by the `/userinfo` endpoint, you must include the user profile data inside the `tokens.user_info` object, not in the top-level `user_info` field. The top-level `user_info` field updates a different user object that is not used by the `/userinfo` endpoint.
+
 This enables testing scenarios like:
 
 - Testing how your application handles different user profiles
 - Simulating error responses from OAuth endpoints
 - Testing token expiration scenarios
 - Creating custom authentication states for specific test cases
-
-
 
 ### Configuration
 

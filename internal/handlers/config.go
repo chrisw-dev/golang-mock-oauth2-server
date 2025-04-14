@@ -69,6 +69,8 @@ func (h *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Received config request: %+v", config)
+
 	// Update user info if provided
 	if config.UserInfo != nil {
 		models.UpdateUserFromConfig(h.user, config.UserInfo)
