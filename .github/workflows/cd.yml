@@ -1,21 +1,51 @@
-name: Go CD (Disabled)
-
-# Disabled for now - will be reintroduced later
-# Original trigger configuration:
-# on:
-#   push:
-#     branches: [ main, master ]
-#     tags: [ 'v*' ]
-
-# Temporarily disable this workflow by using a branch that doesn't exist
+name: Go CD
 on:
   push:
-    branches: [ disabled-workflow-branch ]
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_run:
+    workflows: ["Go CI"]
+    types:
+      - completed
 
 jobs:
+  # Only proceed if CI was successful
+  check-ci:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'push' }}
+    steps:
+      - name: CI Passed Check
+        run: echo "CI workflow passed, proceeding with CD"
+
+  test:
+    name: Test Go Code
+    runs-on: ubuntu-latest
+    needs: check-ci
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        cache: true
+
+    - name: Install dependencies
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: latest
+
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: test
     permissions:
       contents: read
       packages: write
@@ -23,12 +53,14 @@ jobs:
     steps:
     - name: Check out code
       uses: actions/checkout@v4
-
+      with:
+        fetch-depth: 0 # Fetch all history for proper versioning
+    
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3
 
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
+      uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -36,7 +68,7 @@ jobs:
 
     - name: Extract metadata for Docker
       id: meta
-      uses: docker/metadata-action@v4
+      uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ github.repository }}
         tags: |
@@ -45,8 +77,15 @@ jobs:
           type=sha,prefix=,suffix=,format=short
           type=ref,event=branch
 
+    - name: Extract Git metadata
+      id: git-metadata
+      run: |
+        echo "version=$(echo ${{ github.ref_name }} | sed -e 's/^v//')" >> $GITHUB_OUTPUT
+        echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
     - name: Build and push Docker image
-      uses: docker/build-push-action@v4
+      uses: docker/build-push-action@v6
       with:
         context: .
         push: true
@@ -54,3 +93,49 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+        build-args: |
+          VERSION=${{ steps.git-metadata.outputs.version }}
+          COMMIT=${{ steps.git-metadata.outputs.commit }}
+          BUILD_DATE=${{ steps.git-metadata.outputs.date }}
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Release job that runs only on version tag pushes
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Extract release notes
+        id: extract-release-notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Creating release for ${VERSION}"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.extract-release-notes.outputs.version }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}

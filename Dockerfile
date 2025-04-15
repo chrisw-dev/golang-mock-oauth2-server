@@ -11,8 +11,17 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o mock-oauth2-server ./cmd/server
+# Build arguments for versioning
+ARG VERSION=dev
+ARG COMMIT=none
+ARG BUILD_DATE=unknown
+
+# Build the application with version information
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags "-X github.com/chrisw-dev/golang-mock-oauth2-server/internal/version.Version=${VERSION} \
+              -X github.com/chrisw-dev/golang-mock-oauth2-server/internal/version.Commit=${COMMIT} \
+              -X github.com/chrisw-dev/golang-mock-oauth2-server/internal/version.BuildDate=${BUILD_DATE}" \
+    -o mock-oauth2-server ./cmd/server
 
 # Use a minimal alpine image for the final stage
 FROM alpine:latest

@@ -11,6 +11,7 @@ import (
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/handlers"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/version"
 )
 
 func main() {
@@ -18,6 +19,11 @@ func main() {
 	var port int
 	flag.IntVar(&port, "port", 0, "Port to run the server on (default: uses MOCK_OAUTH_PORT env var or 8080)")
 	flag.Parse()
+
+	// Log version info on startup
+	versionInfo := version.GetVersion()
+	log.Printf("Starting Mock OAuth2 Server %s (commit: %s, build: %s)",
+		versionInfo.Version, versionInfo.Commit, versionInfo.BuildDate)
 
 	// Load configuration
 	cfg := config.LoadConfig()
@@ -49,6 +55,7 @@ func main() {
 	mux.Handle("/token", handlers.NewTokenHandler(memoryStore))
 	mux.Handle("/userinfo", &handlers.UserInfoHandler{Store: memoryStore})
 	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, defaultUser))
+	mux.Handle("/version", handlers.NewVersionHandler())
 
 	// Start the server with the custom ServeMux
 	startServer(serverPort, mux)
