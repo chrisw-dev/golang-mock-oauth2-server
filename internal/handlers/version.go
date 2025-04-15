@@ -1,4 +1,4 @@
-// package handlers provides HTTP handlers for the OAuth2 server
+// Package handlers provides HTTP handlers for the OAuth2 server
 package handlers
 
 import (
