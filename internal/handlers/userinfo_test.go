@@ -30,7 +30,7 @@ func TestUserInfoHandler_ServeHTTP(t *testing.T) {
 			name:           "Valid token",
 			authorization:  "Bearer valid-token",
 			expectedStatus: http.StatusOK,
-			expectedBody:   `{"sub":"client-123","name":"Generated User","given_name":"","family_name":"","email":"client-123@example.com","email_verified":true,"picture":""}`,
+			expectedBody:   `{"sub":"client-123","name":"Test User","given_name":"Test","family_name":"User","email":"client-123@example.com","email_verified":true,"picture":"https://example.com/photo.jpg", "id":"1234"}`,
 		},
 		{
 			name:           "Missing token",
