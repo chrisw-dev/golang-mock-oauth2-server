@@ -1,5 +1,7 @@
 # Mock Google OAuth2 Server
 
+[![Security Policy](https://img.shields.io/badge/Security-Policy-green.svg)](./SECURITY.md)
+
 ![CI Status](https://github.com/chrisw-dev/golang-mock-oauth2-server/actions/workflows/ci.yml/badge.svg)
 A lightweight server written in Go that simulates Google's OAuth2 authentication endpoints for development and testing purposes.
 
@@ -20,13 +22,13 @@ This mock server recreates Google's OAuth2 flow without requiring an internet co
 
 ## Installation
 Prerequisites
-- Go 1.16 or higher
+- Go 1.23 or higher
 
 ## Getting Started
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/golang-mock-oauth2-server.git
+git clone https://github.com/chrisw-dev/golang-mock-oauth2-server.git
 cd golang-mock-oauth2-server
 
 # Install dependencies
