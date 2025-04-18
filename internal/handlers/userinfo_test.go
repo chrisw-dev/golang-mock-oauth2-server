@@ -66,10 +66,14 @@ func TestUserInfoHandler_ServeHTTP(t *testing.T) {
 
 			if tt.expectedBody != "" {
 				var actualBody map[string]interface{}
-				json.Unmarshal(resp.Body.Bytes(), &actualBody)
+				if err := json.Unmarshal(resp.Body.Bytes(), &actualBody); err != nil {
+					t.Fatalf("Failed to unmarshal response body: %v", err)
+				}
 
 				var expectedBody map[string]interface{}
-				json.Unmarshal([]byte(tt.expectedBody), &expectedBody)
+				if err := json.Unmarshal([]byte(tt.expectedBody), &expectedBody); err != nil {
+					t.Fatalf("Failed to unmarshal expected body: %v", err)
+				}
 
 				if !reflect.DeepEqual(actualBody, expectedBody) {
 					t.Errorf("expected body %v, got %v", expectedBody, actualBody)
