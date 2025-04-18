@@ -83,6 +83,7 @@ jobs:
         echo "version=$(echo ${{ github.ref_name }} | sed -e 's/^v//')" >> $GITHUB_OUTPUT
         echo "commit=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
         echo "date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+        echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
@@ -102,12 +103,12 @@ jobs:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        image-ref: ghcr.io/${{ github.repository }}:${{ steps.git-metadata.outputs.short_sha }}
         format: 'sarif'
         output: 'trivy-results.sarif'
 
     - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
