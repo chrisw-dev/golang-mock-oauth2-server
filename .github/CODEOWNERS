@@ -1,0 +1,16 @@
+# This file defines who should review and approve changes in this repo
+# For more info see: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# These owners will be the default owners for everything in the repo
+# They will be requested for review when someone opens a pull request
+* @chrisw-dev
+
+# Only chrisw-dev can approve changes to critical files
+/cmd/ @chrisw-dev
+/internal/ @chrisw-dev
+/pkg/ @chrisw-dev
+/*.md @chrisw-dev
+/Dockerfile @chrisw-dev
+/.github/ @chrisw-dev
+/go.mod @chrisw-dev
+/go.sum @chrisw-dev
