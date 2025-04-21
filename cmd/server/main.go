@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -17,7 +18,9 @@ import (
 func main() {
 	// Define command-line flags
 	var port int
+	var host string
 	flag.IntVar(&port, "port", 0, "Port to run the server on (default: uses MOCK_OAUTH_PORT env var or 8080)")
+	flag.StringVar(&host, "host", "", "Host for public URLs (default: http://localhost:[port])")
 	flag.Parse()
 
 	// Log version info on startup
@@ -41,6 +44,12 @@ func main() {
 		serverPort = port
 	}
 
+	// Determine the base URL for OpenID Connect configuration
+	baseURL := host
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("http://localhost:%d", serverPort)
+	}
+
 	// Initialize in-memory store with configuration
 	memoryStore := store.NewMemoryStore()
 
@@ -56,6 +65,9 @@ func main() {
 	mux.Handle("/userinfo", &handlers.UserInfoHandler{Store: memoryStore})
 	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, defaultUser))
 	mux.Handle("/version", handlers.NewVersionHandler())
+
+	// Add OpenID Connect Discovery endpoint
+	mux.Handle("/.well-known/openid-configuration", handlers.NewOpenIDConfigHandler(baseURL))
 
 	// Start the server with the custom ServeMux
 	startServer(serverPort, mux)
