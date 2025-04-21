@@ -13,6 +13,7 @@ This mock server recreates Google's OAuth2 flow without requiring an internet co
 - `/authorize` - Authorization endpoint where users are redirected to authenticate
 - `/token` - Token exchange endpoint to obtain access tokens
 - `/userinfo` - User profile information endpoint
+- `/.well-known/openid-configuration` - OpenID Connect discovery endpoint
 
 ## Use Cases
 - Develop OAuth2 clients offline
@@ -47,8 +48,14 @@ go build -o mock-oauth2-server ./cmd/server
 # Specify a custom port using the command-line flag (highest priority)
 ./mock-oauth2-server --port 9088
 
+# Specify a custom hostname for the server URLs
+./mock-oauth2-server --host http://mock-oauth2-server:9088
+
 # Specify a custom port using environment variable (used if no command-line flag is provided)
 MOCK_OAUTH_PORT=9088 ./mock-oauth2-server
+
+# Specify a custom issuer URL using environment variable (useful in containerized environments)
+MOCK_ISSUER_URL=http://mock-oauth2:8080 ./mock-oauth2-server
 ```
 
 ## Running with Docker
@@ -123,6 +130,7 @@ services:
       - MOCK_USER_EMAIL=testuser@example.com
       - MOCK_USER_NAME=Test User
       - MOCK_TOKEN_EXPIRY=3600
+      - MOCK_ISSUER_URL=http://mock-oauth2:8080
     # Mount a volume for custom fixtures if needed
     # volumes:
     #   - ./test/fixtures:/app/test/fixtures
@@ -185,6 +193,8 @@ golang-mock-oauth2-server/
 │   │   ├── token_test.go                 # Test token handler
 │   │   ├── userinfo.go
 │   │   ├── userinfo_test.go              # Test userinfo handler
+│   │   ├── openid_config.go              # OpenID Connect discovery endpoint
+│   │   ├── openid_config_test.go         # Test OpenID Connect discovery
 │   │   ├── config.go
 │   │   └── config_test.go                # Test config handler
 │   ├── middleware/
@@ -227,6 +237,7 @@ Handler functions process incoming HTTP requests for each OAuth2 endpoint:
 - `authorize.go` - Handles user authentication and generates authorization codes
 - `token.go` - Exchanges authorization codes for access tokens
 - `userinfo.go` - Returns user profile information
+- `openid_config.go` - Provides OpenID Connect discovery metadata
 - `config.go` - Manages dynamic configuration for testing
 
 #### Configuration (`internal/config/`)
@@ -312,6 +323,33 @@ Retrieves mock user profile information.
 }
 ```
 
+#### OpenID Connect Discovery Endpoint (`/.well-known/openid-configuration`)
+
+Provides OpenID Connect (OIDC) configuration metadata for client auto-configuration.
+
+**Method**: GET
+
+**Response**: A JSON document with standard OIDC configuration
+
+```json
+{
+  "issuer": "http://localhost:8080",
+  "authorization_endpoint": "http://localhost:8080/authorize",
+  "token_endpoint": "http://localhost:8080/token",
+  "userinfo_endpoint": "http://localhost:8080/userinfo",
+  "jwks_uri": "http://localhost:8080/jwks",
+  "response_types_supported": ["code"],
+  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": ["RS256"],
+  "scopes_supported": ["openid", "email", "profile"],
+  "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
+  "claims_supported": [
+    "sub", "iss", "name", "given_name", 
+    "family_name", "email", "email_verified", "picture"
+  ]
+}
+```
+
 #### Configuration Endpoint
 
 ##### Dynamic Configuration Endpoint (`/config`)
@@ -376,35 +414,59 @@ Available configuration options:
   - Environment: `MOCK_OAUTH_PORT=9088`
   - Default: `8080`
 
+- Issuer URL:
+  - Command-line: `--host http://custom-hostname:9088`
+  - Environment: `MOCK_ISSUER_URL=http://mock-oauth2:9088`
+  - Default: `http://localhost:[port]`
+
 - Other settings (environment variables only):
   - `MOCK_USER_EMAIL` - Email for the mock user (default: testuser@example.com)
   - `MOCK_USER_NAME` - Name for the mock user (default: Test User)
   - `MOCK_TOKEN_EXPIRY` - Token expiry in seconds (default: 3600)
 
+The issuer URL is particularly important in containerized environments where the service name differs from "localhost". It affects the URLs returned in the OpenID Connect discovery document and needs to match what your OAuth client is configured to use.
+
 ### Example Usage
 
 In your OAuth2 client application:
 
-```bash
+```go
+// For a Go application using the golang.org/x/oauth2 package
+import (
+    "context"
+    "golang.org/x/oauth2"
+)
+
 const (
     clientID     = "test-client-id"
     clientSecret = "test-client-secret"
     redirectURL  = "http://localhost:8081/callback"
-    authURL      = "http://localhost:8080/authorize"
-    tokenURL     = "http://localhost:8080/token"
-    userInfoURL  = "http://localhost:8080/userinfo"
 )
 
-// Configure OAuth2 client to use the mock server
+// You can either specify endpoints manually:
 oauth2Config := &oauth2.Config{
     ClientID:     clientID,
     ClientSecret: clientSecret,
     RedirectURL:  redirectURL,
     Scopes:       []string{"openid", "email", "profile"},
     Endpoint: oauth2.Endpoint{
-        AuthURL:  authURL,
-        TokenURL: tokenURL,
+        AuthURL:  "http://localhost:8080/authorize",
+        TokenURL: "http://localhost:8080/token",
     },
+}
+
+// Or use the OpenID Connect discovery document:
+provider, err := oidc.NewProvider(context.Background(), "http://localhost:8080")
+if err != nil {
+    // handle error
+}
+
+oauth2Config := &oauth2.Config{
+    ClientID:     clientID,
+    ClientSecret: clientSecret,
+    RedirectURL:  redirectURL,
+    Scopes:       []string{"openid", "email", "profile"},
+    Endpoint:     provider.Endpoint(),
 }
 ```
 

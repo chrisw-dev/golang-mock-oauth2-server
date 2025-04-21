@@ -12,6 +12,7 @@ type ServerConfig struct {
 	MockUserEmail   string
 	MockUserName    string
 	MockTokenExpiry int
+	IssuerURL       string
 	mu              sync.RWMutex
 }
 
@@ -20,6 +21,7 @@ var defaultConfig = ServerConfig{
 	MockUserEmail:   "testuser@example.com",
 	MockUserName:    "Test User",
 	MockTokenExpiry: 3600,
+	IssuerURL:       "", // Will be auto-generated if not specified
 }
 
 // LoadConfig loads server configuration from environment variables or returns defaults
@@ -46,6 +48,11 @@ func LoadConfig() *ServerConfig {
 		}
 	}
 
+	// Load issuer URL from environment variable
+	if issuerURL, exists := os.LookupEnv("MOCK_ISSUER_URL"); exists {
+		config.IssuerURL = issuerURL
+	}
+
 	return config
 }
 
@@ -66,6 +73,9 @@ func (c *ServerConfig) UpdateConfig(newConfig map[string]interface{}) {
 	if expiry, ok := newConfig["mock_token_expiry"].(int); ok {
 		c.MockTokenExpiry = expiry
 	}
+	if issuerURL, ok := newConfig["issuer_url"].(string); ok {
+		c.IssuerURL = issuerURL
+	}
 }
 
 // GetConfig returns a copy of the current server configuration without the mutex
@@ -78,5 +88,6 @@ func (c *ServerConfig) GetConfig() ServerConfig {
 		MockUserEmail:   c.MockUserEmail,
 		MockUserName:    c.MockUserName,
 		MockTokenExpiry: c.MockTokenExpiry,
+		IssuerURL:       c.IssuerURL,
 	}
 }

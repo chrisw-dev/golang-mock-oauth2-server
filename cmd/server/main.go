@@ -46,9 +46,18 @@ func main() {
 
 	// Determine the base URL for OpenID Connect configuration
 	baseURL := host
+	
+	// If host flag is not provided, check for IssuerURL in config (from MOCK_ISSUER_URL env var)
+	if baseURL == "" {
+		baseURL = cfg.IssuerURL
+	}
+	
+	// If neither host flag nor MOCK_ISSUER_URL env var is provided, use localhost
 	if baseURL == "" {
 		baseURL = fmt.Sprintf("http://localhost:%d", serverPort)
 	}
+
+	log.Printf("Using issuer URL: %s", baseURL)
 
 	// Initialize in-memory store with configuration
 	memoryStore := store.NewMemoryStore()
@@ -65,7 +74,7 @@ func main() {
 	mux.Handle("/userinfo", &handlers.UserInfoHandler{Store: memoryStore})
 	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, defaultUser))
 	mux.Handle("/version", handlers.NewVersionHandler())
-
+	
 	// Add OpenID Connect Discovery endpoint
 	mux.Handle("/.well-known/openid-configuration", handlers.NewOpenIDConfigHandler(baseURL))
 
