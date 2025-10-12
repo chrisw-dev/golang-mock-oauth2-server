@@ -145,7 +145,10 @@ func VerifyToken(tokenString string) (jwt.MapClaims, error) {
 // generateNonce generates a random nonce for the token
 func generateNonce() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		// This should never happen with crypto/rand, but we handle it for safety
+		panic("failed to generate random bytes: " + err.Error())
+	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
