@@ -98,7 +98,7 @@ func TestGoogleProvider_ExchangeCodeForToken(t *testing.T) {
 					if len(parts) != 3 {
 						t.Errorf("access_token should be a JWT with 3 parts, got %d parts", len(parts))
 					}
-					
+
 					// Parse to verify it's a valid JWT
 					parser := jwtlib.NewParser()
 					_, _, err := parser.ParseUnverified(accessToken, jwtlib.MapClaims{})

@@ -84,10 +84,10 @@ func TestGetConfig(t *testing.T) {
 	if retrievedConfig.Port != 8082 ||
 		retrievedConfig.MockUserEmail != "getconfig@example.com" ||
 		retrievedConfig.MockUserName != "GetConfig User" ||
-		retrievedConfig.MockTokenExpiry != 1800 || 
+		retrievedConfig.MockTokenExpiry != 1800 ||
 		retrievedConfig.IssuerURL != "http://getconfig-mock-oauth2:8082" {
 
-		t.Errorf("expected retrievedConfig to match updated config, got Port: %d, MockUserEmail: %s, MockUserName: %s, MockTokenExpiry: %d, IssuerURL: %s", 
+		t.Errorf("expected retrievedConfig to match updated config, got Port: %d, MockUserEmail: %s, MockUserName: %s, MockTokenExpiry: %d, IssuerURL: %s",
 			retrievedConfig.Port, retrievedConfig.MockUserEmail, retrievedConfig.MockUserName, retrievedConfig.MockTokenExpiry, retrievedConfig.IssuerURL)
 	}
 }
