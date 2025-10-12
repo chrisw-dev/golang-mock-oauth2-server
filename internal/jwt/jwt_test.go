@@ -34,8 +34,9 @@ func TestGenerateIDToken(t *testing.T) {
 	issuer := "http://localhost:8080"
 	clientID := "test-client"
 	sub := "user-123"
+	email := "user-123@example.com"
 
-	tokenString, err := GenerateIDToken(issuer, clientID, sub)
+	tokenString, err := GenerateIDToken(issuer, clientID, sub, email)
 	if err != nil {
 		t.Fatalf("Failed to generate ID token: %v", err)
 	}
@@ -61,6 +62,10 @@ func TestGenerateIDToken(t *testing.T) {
 
 	if claims["aud"] != clientID {
 		t.Errorf("Expected audience %s, got %v", clientID, claims["aud"])
+	}
+
+	if claims["email"] != email {
+		t.Errorf("Expected email %s, got %v", email, claims["email"])
 	}
 }
 
@@ -153,8 +158,9 @@ func TestVerifyToken(t *testing.T) {
 	issuer := "http://localhost:8080"
 	clientID := "test-client"
 	sub := "user-123"
+	email := "user-123@example.com"
 
-	tokenString, err := GenerateIDToken(issuer, clientID, sub)
+	tokenString, err := GenerateIDToken(issuer, clientID, sub, email)
 	if err != nil {
 		t.Fatalf("Failed to generate ID token: %v", err)
 	}
@@ -186,8 +192,9 @@ func TestTokenFormat(t *testing.T) {
 	issuer := "http://localhost:8080"
 	clientID := "test-client"
 	sub := "user-123"
+	email := "user-123@example.com"
 
-	tokenString, err := GenerateIDToken(issuer, clientID, sub)
+	tokenString, err := GenerateIDToken(issuer, clientID, sub, email)
 	if err != nil {
 		t.Fatalf("Failed to generate ID token: %v", err)
 	}

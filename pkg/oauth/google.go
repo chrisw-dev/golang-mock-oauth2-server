@@ -50,6 +50,7 @@ func (p *GoogleProvider) ExchangeCodeForToken(code string) (map[string]interface
 
 	// Generate proper JWT tokens
 	sub := "user-" + authRequest.ClientID
+	email := authRequest.ClientID + "@example.com"
 	scopes := []string{"openid", "email", "profile"}
 
 	accessToken, err := jwt.GenerateAccessToken(p.IssuerURL, authRequest.ClientID, sub, scopes)
@@ -57,7 +58,7 @@ func (p *GoogleProvider) ExchangeCodeForToken(code string) (map[string]interface
 		return nil, &Error{Code: "server_error", Description: "Failed to generate access token"}
 	}
 
-	idToken, err := jwt.GenerateIDToken(p.IssuerURL, authRequest.ClientID, sub)
+	idToken, err := jwt.GenerateIDToken(p.IssuerURL, authRequest.ClientID, sub, email)
 	if err != nil {
 		return nil, &Error{Code: "server_error", Description: "Failed to generate ID token"}
 	}

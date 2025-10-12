@@ -142,6 +142,8 @@ func generateRefreshToken(clientID string) string {
 func generateIDToken(issuerURL, clientID string) (string, error) {
 	// Generate a subject ID based on client ID
 	sub := "user-" + clientID
+	// Generate a default email based on client ID
+	email := clientID + "@example.com"
 
-	return jwt.GenerateIDToken(issuerURL, clientID, sub)
+	return jwt.GenerateIDToken(issuerURL, clientID, sub, email)
 }

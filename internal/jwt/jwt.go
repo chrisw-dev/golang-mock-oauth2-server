@@ -37,7 +37,7 @@ func InitKeys() error {
 }
 
 // GenerateIDToken creates a signed JWT ID token
-func GenerateIDToken(issuer, clientID, sub string) (string, error) {
+func GenerateIDToken(issuer, clientID, sub, email string) (string, error) {
 	if privateKey == nil {
 		if err := InitKeys(); err != nil {
 			return "", err
@@ -52,6 +52,7 @@ func GenerateIDToken(issuer, clientID, sub string) (string, error) {
 		"exp":   now.Add(time.Hour).Unix(),
 		"iat":   now.Unix(),
 		"nonce": generateNonce(),
+		"email": email,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
