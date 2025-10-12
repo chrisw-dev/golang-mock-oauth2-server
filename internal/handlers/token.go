@@ -142,18 +142,22 @@ func generateRefreshToken(clientID string) string {
 func (h *TokenHandler) generateIDToken(issuerURL, clientID string) (string, error) {
 	// Generate a subject ID based on client ID
 	sub := "user-" + clientID
-	
+
 	// Check if there's a configured email in the token config
 	var email string
+	var name string
 	tokenConfig := h.store.GetTokenConfig()
 	if tokenConfig != nil {
 		if userInfoConfig, ok := tokenConfig["user_info"].(map[string]interface{}); ok {
 			if configuredEmail, ok := userInfoConfig["email"].(string); ok {
 				email = configuredEmail
 			}
+			if configuredName, ok := userInfoConfig["name"].(string); ok {
+				name = configuredName
+			}
 		}
 	}
-	
+
 	// If no email is configured, pass empty string (don't default to generated email)
-	return jwt.GenerateIDToken(issuerURL, clientID, sub, email)
+	return jwt.GenerateIDToken(issuerURL, clientID, sub, email, name)
 }
