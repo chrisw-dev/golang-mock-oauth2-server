@@ -50,15 +50,37 @@ func (p *GoogleProvider) ExchangeCodeForToken(code string) (map[string]interface
 
 	// Generate proper JWT tokens
 	sub := "user-" + authRequest.ClientID
-	email := authRequest.ClientID + "@example.com"
 	scopes := []string{"openid", "email", "profile"}
+
+	// Pull email and name from token config if available
+	var email string
+	var name string
+	tokenConfig := p.Store.GetTokenConfig()
+	if tokenConfig != nil {
+		if userInfoConfig, ok := tokenConfig["user_info"].(map[string]interface{}); ok {
+			if configuredEmail, ok := userInfoConfig["email"].(string); ok {
+				email = configuredEmail
+			}
+			if configuredName, ok := userInfoConfig["name"].(string); ok {
+				name = configuredName
+			}
+		}
+	}
+
+	// Fall back to default values if not configured
+	if email == "" {
+		email = authRequest.ClientID + "@example.com"
+	}
+	if name == "" {
+		name = "User " + authRequest.ClientID
+	}
 
 	accessToken, err := jwt.GenerateAccessToken(p.IssuerURL, authRequest.ClientID, sub, scopes)
 	if err != nil {
 		return nil, &Error{Code: "server_error", Description: "Failed to generate access token"}
 	}
 
-	idToken, err := jwt.GenerateIDToken(p.IssuerURL, authRequest.ClientID, sub, email)
+	idToken, err := jwt.GenerateIDToken(p.IssuerURL, authRequest.ClientID, sub, email, name)
 	if err != nil {
 		return nil, &Error{Code: "server_error", Description: "Failed to generate ID token"}
 	}
