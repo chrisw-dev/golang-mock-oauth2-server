@@ -70,13 +70,16 @@ func main() {
 
 	// Set up routes
 	mux.Handle("/authorize", &handlers.AuthorizeHandler{Store: memoryStore})
-	mux.Handle("/token", handlers.NewTokenHandler(memoryStore))
+	mux.Handle("/token", handlers.NewTokenHandlerWithIssuer(memoryStore, baseURL))
 	mux.Handle("/userinfo", &handlers.UserInfoHandler{Store: memoryStore})
 	mux.Handle("/config", handlers.NewConfigHandler(memoryStore, defaultUser))
 	mux.Handle("/version", handlers.NewVersionHandler())
 	
 	// Add OpenID Connect Discovery endpoint
 	mux.Handle("/.well-known/openid-configuration", handlers.NewOpenIDConfigHandler(baseURL))
+	
+	// Add JWKS endpoint
+	mux.Handle("/jwks", handlers.NewJWKSHandler())
 
 	// Start the server with the custom ServeMux
 	startServer(serverPort, mux)

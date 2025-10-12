@@ -8,8 +8,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/jwt"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
 func TestTokenHandler(t *testing.T) {
@@ -60,5 +62,46 @@ func TestTokenHandler(t *testing.T) {
 	}
 	if response.TokenType != "Bearer" {
 		t.Errorf("Expected token_type to be 'Bearer', got '%s'", response.TokenType)
+	}
+
+	// Verify that ID token is a valid JWT
+	if response.IDToken == "" {
+		t.Errorf("Expected ID token to be present")
+	}
+
+	// Parse ID token to verify it's a valid JWT
+	parser := jwtlib.NewParser()
+	idToken, _, err := parser.ParseUnverified(response.IDToken, jwtlib.MapClaims{})
+	if err != nil {
+		t.Errorf("Failed to parse ID token as JWT: %v", err)
+	}
+
+	// Check that the token has standard JWT headers
+	if _, ok := idToken.Header["alg"]; !ok {
+		t.Error("ID token should have 'alg' header")
+	}
+
+	if _, ok := idToken.Header["kid"]; !ok {
+		t.Error("ID token should have 'kid' header")
+	}
+
+	// Verify the ID token using our JWT package
+	claims, err := jwt.VerifyToken(response.IDToken)
+	if err != nil {
+		t.Errorf("Failed to verify ID token: %v", err)
+	}
+
+	if claims == nil {
+		t.Error("ID token claims should not be nil")
+	}
+
+	// Verify that access token is a valid JWT
+	accessToken, _, err := parser.ParseUnverified(response.AccessToken, jwtlib.MapClaims{})
+	if err != nil {
+		t.Errorf("Failed to parse access token as JWT: %v", err)
+	}
+
+	if _, ok := accessToken.Header["alg"]; !ok {
+		t.Error("Access token should have 'alg' header")
 	}
 }

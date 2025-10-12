@@ -4,21 +4,33 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/jwt"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
 // TokenHandler handles OAuth2 token exchange requests
 type TokenHandler struct {
-	store store.Store
+	store     store.Store
+	issuerURL string
 }
 
 // NewTokenHandler creates a new TokenHandler with the given store
 func NewTokenHandler(store store.Store) *TokenHandler {
 	return &TokenHandler{
-		store: store,
+		store:     store,
+		issuerURL: "http://localhost:8080", // default issuer
+	}
+}
+
+// NewTokenHandlerWithIssuer creates a new TokenHandler with the given store and issuer URL
+func NewTokenHandlerWithIssuer(store store.Store, issuerURL string) *TokenHandler {
+	return &TokenHandler{
+		store:     store,
+		issuerURL: issuerURL,
 	}
 }
 
@@ -69,12 +81,26 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate token response
+	accessToken, err := generateAccessToken(h.issuerURL, clientID, authRequest.Scope)
+	if err != nil {
+		log.Printf("Error generating access token: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	idToken, err := generateIDToken(h.issuerURL, clientID)
+	if err != nil {
+		log.Printf("Error generating ID token: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
 	tokenResponse := models.TokenResponse{
-		AccessToken:  generateAccessToken(clientID),
+		AccessToken:  accessToken,
 		TokenType:    "Bearer",
 		ExpiresIn:    3600,
 		RefreshToken: generateRefreshToken(clientID),
-		IDToken:      generateIDToken(clientID),
+		IDToken:      idToken,
 	}
 
 	// Store the token in the store for future validation
@@ -94,8 +120,17 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helper function to generate a mock access token
-func generateAccessToken(clientID string) string {
-	return "mock-access-token-" + clientID + "-" + time.Now().Format("20060102150405")
+func generateAccessToken(issuerURL, clientID, scope string) (string, error) {
+	// Parse scopes from the scope string
+	scopes := strings.Fields(scope)
+	if len(scopes) == 0 {
+		scopes = []string{"openid"}
+	}
+
+	// Generate a subject ID based on client ID
+	sub := "user-" + clientID
+
+	return jwt.GenerateAccessToken(issuerURL, clientID, sub, scopes)
 }
 
 // Helper function to generate a mock refresh token
@@ -104,6 +139,9 @@ func generateRefreshToken(clientID string) string {
 }
 
 // Helper function to generate a mock ID token
-func generateIDToken(clientID string) string {
-	return "mock-id-token-" + clientID + "-" + time.Now().Format("20060102150405")
+func generateIDToken(issuerURL, clientID string) (string, error) {
+	// Generate a subject ID based on client ID
+	sub := "user-" + clientID
+
+	return jwt.GenerateIDToken(issuerURL, clientID, sub)
 }
