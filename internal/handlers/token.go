@@ -88,7 +88,7 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idToken, err := generateIDToken(h.issuerURL, clientID)
+	idToken, err := h.generateIDToken(h.issuerURL, clientID)
 	if err != nil {
 		log.Printf("Error generating ID token: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -139,11 +139,21 @@ func generateRefreshToken(clientID string) string {
 }
 
 // Helper function to generate a mock ID token
-func generateIDToken(issuerURL, clientID string) (string, error) {
+func (h *TokenHandler) generateIDToken(issuerURL, clientID string) (string, error) {
 	// Generate a subject ID based on client ID
 	sub := "user-" + clientID
-	// Generate a default email based on client ID
-	email := clientID + "@example.com"
-
+	
+	// Check if there's a configured email in the token config
+	var email string
+	tokenConfig := h.store.GetTokenConfig()
+	if tokenConfig != nil {
+		if userInfoConfig, ok := tokenConfig["user_info"].(map[string]interface{}); ok {
+			if configuredEmail, ok := userInfoConfig["email"].(string); ok {
+				email = configuredEmail
+			}
+		}
+	}
+	
+	// If no email is configured, pass empty string (don't default to generated email)
 	return jwt.GenerateIDToken(issuerURL, clientID, sub, email)
 }

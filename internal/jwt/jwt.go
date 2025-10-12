@@ -52,7 +52,11 @@ func GenerateIDToken(issuer, clientID, sub, email string) (string, error) {
 		"exp":   now.Add(time.Hour).Unix(),
 		"iat":   now.Unix(),
 		"nonce": generateNonce(),
-		"email": email,
+	}
+	
+	// Only include email claim if an email is provided
+	if email != "" {
+		claims["email"] = email
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
