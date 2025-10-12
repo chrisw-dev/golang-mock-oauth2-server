@@ -4,17 +4,22 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/jwt"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
 // GoogleProvider implements the Provider interface for Google OAuth2
 type GoogleProvider struct {
-	Store *store.MemoryStore
+	Store     *store.MemoryStore
+	IssuerURL string
 }
 
 // NewGoogleProvider creates a new Google OAuth2 provider instance
 func NewGoogleProvider(store *store.MemoryStore) *GoogleProvider {
-	return &GoogleProvider{Store: store}
+	return &GoogleProvider{
+		Store:     store,
+		IssuerURL: "http://localhost:8080",
+	}
 }
 
 // GenerateAuthURL creates an authorization URL for the OAuth2 flow
@@ -43,12 +48,26 @@ func (p *GoogleProvider) ExchangeCodeForToken(code string) (map[string]interface
 		return nil, &Error{Code: "invalid_grant", Description: "Authorization code expired"}
 	}
 
+	// Generate proper JWT tokens
+	sub := "user-" + authRequest.ClientID
+	scopes := []string{"openid", "email", "profile"}
+
+	accessToken, err := jwt.GenerateAccessToken(p.IssuerURL, authRequest.ClientID, sub, scopes)
+	if err != nil {
+		return nil, &Error{Code: "server_error", Description: "Failed to generate access token"}
+	}
+
+	idToken, err := jwt.GenerateIDToken(p.IssuerURL, authRequest.ClientID, sub)
+	if err != nil {
+		return nil, &Error{Code: "server_error", Description: "Failed to generate ID token"}
+	}
+
 	token := map[string]interface{}{
-		"access_token":  "mock-access-token",
+		"access_token":  accessToken,
 		"token_type":    "Bearer",
 		"expires_in":    3600,
 		"refresh_token": "mock-refresh-token",
-		"id_token":      "mock-id-token",
+		"id_token":      idToken,
 	}
 
 	return token, nil

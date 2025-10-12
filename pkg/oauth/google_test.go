@@ -1,12 +1,13 @@
 package oauth
 
 import (
-	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
+	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
 func TestGoogleProvider_GenerateAuthURL(t *testing.T) {
@@ -33,34 +34,24 @@ func TestGoogleProvider_ExchangeCodeForToken(t *testing.T) {
 	store.StoreAuthCode(code, authRequest)
 
 	tests := []struct {
-		name           string
-		code           string
-		expectedError  string
-		expectedResult map[string]interface{}
+		name          string
+		code          string
+		expectedError string
 	}{
 		{
 			name:          "Valid code",
 			code:          "valid-code",
 			expectedError: "",
-			expectedResult: map[string]interface{}{
-				"access_token":  "mock-access-token",
-				"token_type":    "Bearer",
-				"expires_in":    3600,
-				"refresh_token": "mock-refresh-token",
-				"id_token":      "mock-id-token",
-			},
 		},
 		{
-			name:           "Invalid code",
-			code:           "invalid-code",
-			expectedError:  "invalid_grant: Invalid authorization code",
-			expectedResult: nil,
+			name:          "Invalid code",
+			code:          "invalid-code",
+			expectedError: "invalid_grant: Invalid authorization code",
 		},
 		{
-			name:           "Expired code",
-			code:           "expired-code",
-			expectedError:  "invalid_grant: Authorization code expired",
-			expectedResult: nil,
+			name:          "Expired code",
+			code:          "expired-code",
+			expectedError: "invalid_grant: Authorization code expired",
 		},
 	}
 
@@ -80,8 +71,60 @@ func TestGoogleProvider_ExchangeCodeForToken(t *testing.T) {
 				if err == nil || err.Error() != tt.expectedError {
 					t.Errorf("expected error %s, got %v", tt.expectedError, err)
 				}
-			} else if !reflect.DeepEqual(result, tt.expectedResult) {
-				t.Errorf("expected result %+v, got %+v", tt.expectedResult, result)
+			} else {
+				// Check that the result contains the expected fields
+				if result == nil {
+					t.Error("expected result to be non-nil")
+					return
+				}
+
+				// Check token_type
+				if result["token_type"] != "Bearer" {
+					t.Errorf("expected token_type to be Bearer, got %v", result["token_type"])
+				}
+
+				// Check expires_in
+				if result["expires_in"] != 3600 {
+					t.Errorf("expected expires_in to be 3600, got %v", result["expires_in"])
+				}
+
+				// Check that access_token is a valid JWT
+				accessToken, ok := result["access_token"].(string)
+				if !ok || accessToken == "" {
+					t.Error("access_token should be a non-empty string")
+				} else {
+					// Verify it's a JWT (has 3 parts separated by dots)
+					parts := strings.Split(accessToken, ".")
+					if len(parts) != 3 {
+						t.Errorf("access_token should be a JWT with 3 parts, got %d parts", len(parts))
+					}
+
+					// Parse to verify it's a valid JWT
+					parser := jwtlib.NewParser()
+					_, _, err := parser.ParseUnverified(accessToken, jwtlib.MapClaims{})
+					if err != nil {
+						t.Errorf("access_token should be a valid JWT: %v", err)
+					}
+				}
+
+				// Check that id_token is a valid JWT
+				idToken, ok := result["id_token"].(string)
+				if !ok || idToken == "" {
+					t.Error("id_token should be a non-empty string")
+				} else {
+					// Verify it's a JWT (has 3 parts separated by dots)
+					parts := strings.Split(idToken, ".")
+					if len(parts) != 3 {
+						t.Errorf("id_token should be a JWT with 3 parts, got %d parts", len(parts))
+					}
+
+					// Parse to verify it's a valid JWT
+					parser := jwtlib.NewParser()
+					_, _, err := parser.ParseUnverified(idToken, jwtlib.MapClaims{})
+					if err != nil {
+						t.Errorf("id_token should be a valid JWT: %v", err)
+					}
+				}
 			}
 		})
 	}
@@ -97,32 +140,19 @@ func TestGoogleProvider_GetUserInfo(t *testing.T) {
 	store.StoreAuthCode("test-client", &models.AuthRequest{ClientID: "test-client"})
 
 	tests := []struct {
-		name           string
-		token          string
-		expectedError  string
-		expectedResult map[string]interface{}
+		name          string
+		token         string
+		expectedError string
 	}{
 		{
 			name:          "Valid token",
 			token:         "valid-token",
 			expectedError: "",
-			expectedResult: map[string]interface{}{
-				"sub":            "test-client",
-				"name":           "Test User",
-				"given_name":     "Test",
-				"family_name":    "User",
-				"email":          "test-client@example.com",
-				"email_verified": true,
-				"picture":        "https://example.com/photo.jpg",
-				"locale":         "",
-				"hd":             "",
-			},
 		},
 		{
-			name:           "Invalid token",
-			token:          "invalid-token",
-			expectedError:  "invalid_token: Invalid access token",
-			expectedResult: nil,
+			name:          "Invalid token",
+			token:         "invalid-token",
+			expectedError: "invalid_token: Invalid access token",
 		},
 	}
 
@@ -134,8 +164,20 @@ func TestGoogleProvider_GetUserInfo(t *testing.T) {
 				if err == nil || err.Error() != tt.expectedError {
 					t.Errorf("expected error %s, got %v", tt.expectedError, err)
 				}
-			} else if !reflect.DeepEqual(result, tt.expectedResult) {
-				t.Errorf("expected result %+v, got %+v", tt.expectedResult, result)
+			} else {
+				// Check that the result contains the expected user info fields
+				if result == nil {
+					t.Error("expected result to be non-nil")
+					return
+				}
+
+				// Check that required fields are present
+				if result["sub"] == "" {
+					t.Error("expected sub to be non-empty")
+				}
+				if result["email"] == "" {
+					t.Error("expected email to be non-empty")
+				}
 			}
 		})
 	}

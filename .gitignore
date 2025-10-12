@@ -25,3 +25,6 @@ mock-oauth2-server
 
 # env file
 .env
+
+# Server binary
+server
