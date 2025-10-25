@@ -18,6 +18,24 @@ func (h *UserInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Log request details
 	log.Printf("UserInfo request received from %s", r.RemoteAddr)
 
+	// Check for error scenarios configured for the userinfo endpoint
+	if errorScenario, exists := h.Store.GetErrorScenario("userinfo"); exists {
+		log.Printf("UserInfo request: Returning configured error: %s", errorScenario.ErrorCode)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(errorScenario.StatusCode)
+		
+		errorResponse := map[string]string{
+			"error": errorScenario.ErrorCode,
+		}
+		
+		if errorScenario.Description != "" {
+			errorResponse["error_description"] = errorScenario.Description
+		}
+		
+		json.NewEncoder(w).Encode(errorResponse)
+		return
+	}
+
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		log.Printf("UserInfo request failed: Authorization header missing")

@@ -42,6 +42,23 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for error scenarios configured for the token endpoint
+	if errorScenario, exists := h.store.GetErrorScenario("token"); exists {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(errorScenario.StatusCode)
+		
+		errorResponse := map[string]string{
+			"error": errorScenario.ErrorCode,
+		}
+		
+		if errorScenario.Description != "" {
+			errorResponse["error_description"] = errorScenario.Description
+		}
+		
+		json.NewEncoder(w).Encode(errorResponse)
+		return
+	}
+
 	// Parse form data
 	err := r.ParseForm()
 	if err != nil {
