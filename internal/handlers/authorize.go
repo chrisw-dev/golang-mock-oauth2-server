@@ -29,6 +29,30 @@ func (h *AuthorizeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if there's an error scenario configured for the authorize endpoint
+	if errorScenario, exists := h.Store.GetErrorScenario("authorize"); exists {
+		// Redirect to the provided redirect URI with error parameters
+		redirectURL, err := url.Parse(redirectURI)
+		if err != nil {
+			http.Error(w, "Invalid redirect URI", http.StatusBadRequest)
+			return
+		}
+
+		query := redirectURL.Query()
+		query.Set("error", errorScenario.ErrorCode)
+		if errorScenario.Description != "" {
+			query.Set("error_description", errorScenario.Description)
+		}
+		if state != "" {
+			query.Set("state", state)
+		}
+		redirectURL.RawQuery = query.Encode()
+
+		log.Printf("Returning error redirect for authorize endpoint: error=%s, description=%s", errorScenario.ErrorCode, errorScenario.Description)
+		http.Redirect(w, r, redirectURL.String(), http.StatusFound)
+		return
+	}
+
 	// Generate authorization code
 	authCode := uuid.New().String()
 	expiration := time.Now().Add(10 * time.Minute)
