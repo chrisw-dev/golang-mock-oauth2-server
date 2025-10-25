@@ -428,7 +428,9 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 	defer tokenResp.Body.Close()
 
 	var tokenData map[string]interface{}
-	json.NewDecoder(tokenResp.Body).Decode(&tokenData)
+	if err := json.NewDecoder(tokenResp.Body).Decode(&tokenData); err != nil {
+		t.Fatalf("Failed to decode token response: %v", err)
+	}
 	accessToken := tokenData["access_token"].(string)
 
 	t.Run("Step 1: Verify userinfo works with valid token", func(t *testing.T) {

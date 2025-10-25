@@ -25,15 +25,17 @@ func (h *UserInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(errorScenario.StatusCode)
 		
 		errorResponse := map[string]string{
-			"error": errorScenario.ErrorCode,
-		}
-		
-		if errorScenario.Description != "" {
-			errorResponse["error_description"] = errorScenario.Description
-		}
-		
-		json.NewEncoder(w).Encode(errorResponse)
-		return
+		"error": errorScenario.ErrorCode,
+	}
+	
+	if errorScenario.Description != "" {
+		errorResponse["error_description"] = errorScenario.Description
+	}
+	
+	if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
+		log.Printf("Error encoding error response: %v", err)
+	}
+	return
 	}
 
 	authHeader := r.Header.Get("Authorization")
