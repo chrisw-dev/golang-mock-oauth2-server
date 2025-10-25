@@ -34,6 +34,7 @@ type ConfigRequest struct {
 
 // ErrorScenario defines an error condition to simulate
 type ErrorScenario struct {
+	Enabled          bool   `json:"enabled"`  // Whether the error scenario is enabled
 	Endpoint         string `json:"endpoint"` // Which endpoint should return an error (authorize, token, userinfo)
 	Error            string `json:"error"`    // OAuth2 error code
 	ErrorDescription string `json:"error_description,omitempty"`
@@ -110,6 +111,7 @@ func (h *ConfigHandler) storeTokenConfig(tokenConfig map[string]interface{}) {
 func (h *ConfigHandler) storeErrorScenario(scenario ErrorScenario) {
 	// Convert from handlers.ErrorScenario to types.ErrorScenario
 	storeScenario := types.ErrorScenario{
+		Enabled:     scenario.Enabled,
 		Endpoint:    scenario.Endpoint,
 		StatusCode:  determineStatusCode(scenario.Error),
 		ErrorCode:   scenario.Error,
@@ -137,8 +139,12 @@ func determineStatusCode(errorCode string) int {
 		return http.StatusBadRequest
 	case "access_denied":
 		return http.StatusForbidden
+	case "unsupported_response_type":
+		return http.StatusBadRequest
 	case "server_error":
 		return http.StatusInternalServerError
+	case "temporarily_unavailable":
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusBadRequest
 	}

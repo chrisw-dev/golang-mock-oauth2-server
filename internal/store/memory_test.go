@@ -58,6 +58,7 @@ func TestMemoryStore_ConfigMethods(t *testing.T) {
 func TestMemoryStore_ErrorScenarioMethods(t *testing.T) {
 	store := NewMemoryStore()
 	scenario := types.ErrorScenario{
+		Enabled:     true,
 		Endpoint:    "test-endpoint",
 		StatusCode:  400,
 		ErrorCode:   "invalid_request",
@@ -76,6 +77,20 @@ func TestMemoryStore_ErrorScenarioMethods(t *testing.T) {
 	_, exists = store.GetErrorScenario("test-endpoint")
 	if exists {
 		t.Errorf("expected error scenario to be cleared")
+	}
+
+	// Test disabled scenario is not returned
+	disabledScenario := types.ErrorScenario{
+		Enabled:     false,
+		Endpoint:    "disabled-endpoint",
+		StatusCode:  400,
+		ErrorCode:   "access_denied",
+		Description: "Access denied",
+	}
+	store.StoreErrorScenario(disabledScenario)
+	_, exists = store.GetErrorScenario("disabled-endpoint")
+	if exists {
+		t.Errorf("expected disabled error scenario to not be returned")
 	}
 }
 

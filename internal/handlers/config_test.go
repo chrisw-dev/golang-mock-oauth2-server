@@ -63,7 +63,7 @@ func (s *mockStore) StoreErrorScenario(scenario types.ErrorScenario) {
 }
 
 func (s *mockStore) GetErrorScenario(endpoint string) (*types.ErrorScenario, bool) {
-	if s.errorScenario != nil && s.errorScenario.Endpoint == endpoint {
+	if s.errorScenario != nil && s.errorScenario.Endpoint == endpoint && s.errorScenario.Enabled {
 		return s.errorScenario, true
 	}
 	return nil, false
@@ -255,6 +255,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "invalid_request",
 			errorScenario: ErrorScenario{
+				Enabled:          true,
 				Endpoint:         "token",
 				Error:            "invalid_request",
 				ErrorDescription: "Test invalid request",
@@ -264,6 +265,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "invalid_client",
 			errorScenario: ErrorScenario{
+				Enabled:          true,
 				Endpoint:         "token",
 				Error:            "invalid_client",
 				ErrorDescription: "Test invalid client",
@@ -273,6 +275,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "server_error",
 			errorScenario: ErrorScenario{
+				Enabled:          true,
 				Endpoint:         "userinfo",
 				Error:            "server_error",
 				ErrorDescription: "Test server error",
@@ -282,11 +285,32 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "unknown_error",
 			errorScenario: ErrorScenario{
+				Enabled:          true,
 				Endpoint:         "authorize",
 				Error:            "unknown_error",
 				ErrorDescription: "Test unknown error",
 			},
 			expectedCode: http.StatusBadRequest, // Default for unknown errors
+		},
+		{
+			name: "unsupported_response_type",
+			errorScenario: ErrorScenario{
+				Enabled:          true,
+				Endpoint:         "authorize",
+				Error:            "unsupported_response_type",
+				ErrorDescription: "Response type not supported",
+			},
+			expectedCode: http.StatusBadRequest,
+		},
+		{
+			name: "temporarily_unavailable",
+			errorScenario: ErrorScenario{
+				Enabled:          true,
+				Endpoint:         "authorize",
+				Error:            "temporarily_unavailable",
+				ErrorDescription: "Server is under maintenance",
+			},
+			expectedCode: http.StatusServiceUnavailable,
 		},
 	}
 
@@ -316,6 +340,9 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 			}
 
 			// Check the fields were stored correctly
+			if scenario.Enabled != tc.errorScenario.Enabled {
+				t.Errorf("wrong enabled status stored: got %v want %v", scenario.Enabled, tc.errorScenario.Enabled)
+			}
 			if scenario.Endpoint != tc.errorScenario.Endpoint {
 				t.Errorf("wrong endpoint stored: got %v want %v", scenario.Endpoint, tc.errorScenario.Endpoint)
 			}
@@ -349,6 +376,7 @@ func TestConfigHandler_CombinedUpdate(t *testing.T) {
 			"expires_in":   2400,
 		},
 		ErrorScenario: &ErrorScenario{
+			Enabled:          true,
 			Endpoint:         "token",
 			Error:            "invalid_grant",
 			ErrorDescription: "Combined test error",
@@ -390,6 +418,9 @@ func TestConfigHandler_CombinedUpdate(t *testing.T) {
 		t.Errorf("error scenario not stored")
 		return
 	}
+	if !scenario.Enabled {
+		t.Errorf("error scenario enabled flag not set correctly")
+	}
 	if scenario.ErrorCode != "invalid_grant" {
 		t.Errorf("error scenario not stored correctly")
 	}
@@ -429,7 +460,9 @@ func TestDetermineStatusCode(t *testing.T) {
 		{"unsupported_grant_type", "unsupported_grant_type", http.StatusBadRequest},
 		{"invalid_scope", "invalid_scope", http.StatusBadRequest},
 		{"access_denied", "access_denied", http.StatusForbidden},
+		{"unsupported_response_type", "unsupported_response_type", http.StatusBadRequest},
 		{"server_error", "server_error", http.StatusInternalServerError},
+		{"temporarily_unavailable", "temporarily_unavailable", http.StatusServiceUnavailable},
 		{"unknown_error", "unknown_error", http.StatusBadRequest},
 		{"empty_string", "", http.StatusBadRequest},
 	}

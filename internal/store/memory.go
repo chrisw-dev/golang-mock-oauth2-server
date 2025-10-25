@@ -123,8 +123,8 @@ func (s *MemoryStore) GetErrorScenario(endpoint string) (*types.ErrorScenario, b
 		return nil, false
 	}
 
-	// Only return if this scenario is for the requested endpoint
-	if s.errorScenario.Endpoint == endpoint {
+	// Only return if this scenario is for the requested endpoint and is enabled
+	if s.errorScenario.Endpoint == endpoint && s.errorScenario.Enabled {
 		return s.errorScenario, true
 	}
 
