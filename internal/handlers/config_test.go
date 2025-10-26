@@ -345,8 +345,8 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 			}
 
 			// Check the fields were stored correctly
-			if scenario.Enabled != (tc.errorScenario.Enabled != nil && *tc.errorScenario.Enabled) {
-				expectedEnabled := tc.errorScenario.Enabled != nil && *tc.errorScenario.Enabled
+			expectedEnabled := tc.errorScenario.Enabled != nil && *tc.errorScenario.Enabled
+			if scenario.Enabled != expectedEnabled {
 				t.Errorf("wrong enabled status stored: got %v want %v", scenario.Enabled, expectedEnabled)
 			}
 			if scenario.Endpoint != tc.errorScenario.Endpoint {
@@ -489,11 +489,11 @@ func TestConfigHandler_ErrorScenarioDefaultEnabled(t *testing.T) {
 	defaultUser := models.NewDefaultUser()
 	handler := NewConfigHandler(mockStore, defaultUser)
 
-	// Test case where enabled field is not set (defaults to false in Go)
-	// but should be enabled when endpoint and error are provided
+	// Test case where enabled field is not set (nil pointer)
+	// Should default to true when endpoint and error are provided
 	configReq := ConfigRequest{
 		ErrorScenario: &ErrorScenario{
-			// Enabled field not set, defaults to false
+			// Enabled field not set (nil), will default to true
 			Endpoint:         "authorize",
 			Error:            "unauthorized_client",
 			ErrorDescription: "Client not authorized",
