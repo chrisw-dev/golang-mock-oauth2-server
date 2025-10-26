@@ -70,6 +70,42 @@ Enhancement suggestions are tracked as [GitHub issues](https://github.com/chrisw
 - Format your code using `go fmt`
 - Verify your code using `go vet` and `golangci-lint`
 
+## Release Process
+
+This project uses an automated release process. When changes are merged to the `main` branch:
+
+1. **Continuous Integration (CI)** runs all tests and checks
+2. **Automatic Tagging**: After tests pass, a new version tag is automatically created
+   - The patch version is incremented (e.g., `v1.0.0` → `v1.0.1`)
+   - If no tags exist, the first version will be `v0.1.0`
+3. **Docker Image Build**: The Docker image is built and pushed to GitHub Container Registry
+4. **GitHub Release**: A new GitHub release is created with auto-generated release notes
+
+### Version Numbering
+
+The project follows [Semantic Versioning](https://semver.org/):
+- **Major version** (vX.0.0): Breaking changes (manual tag required)
+- **Minor version** (v1.X.0): New features, backwards compatible (manual tag required)
+- **Patch version** (v1.0.X): Bug fixes, backwards compatible (automated)
+
+By default, each merge to `main` increments the patch version automatically.
+
+### Manual Version Bumps
+
+To create a major or minor version release, manually create and push a tag:
+
+```bash
+# For a minor version bump (new features)
+git tag -a v1.1.0 -m "Release v1.1.0: Add new features"
+git push origin v1.1.0
+
+# For a major version bump (breaking changes)
+git tag -a v2.0.0 -m "Release v2.0.0: Breaking changes"
+git push origin v2.0.0
+```
+
+Manual tags will skip the auto-tagging process and directly trigger the release workflow.
+
 ## License
 
 By contributing to this project, you agree that your contributions will be licensed under the project's [MIT License](./LICENSE).
