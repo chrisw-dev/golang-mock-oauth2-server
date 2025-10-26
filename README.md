@@ -376,10 +376,13 @@ Allows test code to dynamically configure the responses returned by the OAuth2 e
   "error_scenario": {
     "endpoint": "token", 
     "error": "invalid_grant",
-    "error_description": "Custom error for testing"
+    "error_description": "Custom error for testing",
+    "enabled": true
   }
 }
 ```
+
+**Note**: The `enabled` field is optional and defaults to `true` when `endpoint` and `error` are provided. To explicitly disable an error scenario, set `"enabled": false`.
 
 **Response**:
 
@@ -391,6 +394,30 @@ Allows test code to dynamically configure the responses returned by the OAuth2 e
 ```
 
 **IMPORTANT**: To update user information that will be returned by the `/userinfo` endpoint, you must include the user profile data inside the `tokens.user_info` object, not in the top-level `user_info` field. The top-level `user_info` field updates a different user object that is not used by the `/userinfo` endpoint.
+
+**Error Scenario Configuration**:
+
+The `error_scenario` object supports the following OAuth2 error codes for testing:
+
+**Authorize endpoint errors:**
+- `access_denied` - User denied access
+- `unauthorized_client` - Client not authorized for this grant type
+- `invalid_scope` - Requested scope is invalid or unknown
+- `temporarily_unavailable` - Server is temporarily unavailable
+- `invalid_request` - Request is missing a required parameter or malformed
+- `unsupported_response_type` - Response type is not supported
+- `server_error` - Internal server error occurred
+
+**Token endpoint errors:**
+- `invalid_grant` - Invalid authorization code or credentials
+- `invalid_client` - Client authentication failed
+- `unsupported_grant_type` - Grant type is not supported
+- `invalid_request` - Request is malformed
+
+**Userinfo endpoint errors:**
+- `invalid_token` - Access token is invalid or expired
+- `insufficient_scope` - Token lacks required scope
+- `server_error` - Internal server error occurred
 
 This enables testing scenarios like:
 

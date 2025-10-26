@@ -28,6 +28,11 @@ func newMockStore() *mockStore {
 	}
 }
 
+// Helper function to create a bool pointer
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func (s *mockStore) StoreAuthCode(code string, request *models.AuthRequest) {
 	s.authCodes[code] = request
 }
@@ -255,7 +260,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "invalid_request",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "token",
 				Error:            "invalid_request",
 				ErrorDescription: "Test invalid request",
@@ -265,7 +270,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "invalid_client",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "token",
 				Error:            "invalid_client",
 				ErrorDescription: "Test invalid client",
@@ -275,7 +280,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "server_error",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "userinfo",
 				Error:            "server_error",
 				ErrorDescription: "Test server error",
@@ -285,7 +290,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "unknown_error",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "authorize",
 				Error:            "unknown_error",
 				ErrorDescription: "Test unknown error",
@@ -295,7 +300,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "unsupported_response_type",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "authorize",
 				Error:            "unsupported_response_type",
 				ErrorDescription: "Response type not supported",
@@ -305,7 +310,7 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 		{
 			name: "temporarily_unavailable",
 			errorScenario: ErrorScenario{
-				Enabled:          true,
+				Enabled:          boolPtr(true),
 				Endpoint:         "authorize",
 				Error:            "temporarily_unavailable",
 				ErrorDescription: "Server is under maintenance",
@@ -340,8 +345,9 @@ func TestConfigHandler_UpdateErrorScenario(t *testing.T) {
 			}
 
 			// Check the fields were stored correctly
-			if scenario.Enabled != tc.errorScenario.Enabled {
-				t.Errorf("wrong enabled status stored: got %v want %v", scenario.Enabled, tc.errorScenario.Enabled)
+			if scenario.Enabled != (tc.errorScenario.Enabled != nil && *tc.errorScenario.Enabled) {
+				expectedEnabled := tc.errorScenario.Enabled != nil && *tc.errorScenario.Enabled
+				t.Errorf("wrong enabled status stored: got %v want %v", scenario.Enabled, expectedEnabled)
 			}
 			if scenario.Endpoint != tc.errorScenario.Endpoint {
 				t.Errorf("wrong endpoint stored: got %v want %v", scenario.Endpoint, tc.errorScenario.Endpoint)
@@ -376,7 +382,7 @@ func TestConfigHandler_CombinedUpdate(t *testing.T) {
 			"expires_in":   2400,
 		},
 		ErrorScenario: &ErrorScenario{
-			Enabled:          true,
+			Enabled:          boolPtr(true),
 			Endpoint:         "token",
 			Error:            "invalid_grant",
 			ErrorDescription: "Combined test error",
@@ -474,5 +480,82 @@ func TestDetermineStatusCode(t *testing.T) {
 				t.Errorf("determineStatusCode(%s) = %d; want %d", tc.errorCode, result, tc.expected)
 			}
 		})
+	}
+}
+
+func TestConfigHandler_ErrorScenarioDefaultEnabled(t *testing.T) {
+	// Setup
+	mockStore := newMockStore()
+	defaultUser := models.NewDefaultUser()
+	handler := NewConfigHandler(mockStore, defaultUser)
+
+	// Test case where enabled field is not set (defaults to false in Go)
+	// but should be enabled when endpoint and error are provided
+	configReq := ConfigRequest{
+		ErrorScenario: &ErrorScenario{
+			// Enabled field not set, defaults to false
+			Endpoint:         "authorize",
+			Error:            "unauthorized_client",
+			ErrorDescription: "Client not authorized",
+		},
+	}
+	reqBody, _ := json.Marshal(configReq)
+	req := httptest.NewRequest("POST", "/config", bytes.NewBuffer(reqBody))
+	rr := httptest.NewRecorder()
+
+	// Call handler
+	handler.ServeHTTP(rr, req)
+
+	// Check response code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify error scenario was stored and ENABLED by default
+	scenario, exists := mockStore.GetErrorScenario("authorize")
+	if !exists {
+		t.Errorf("error scenario not found for authorize endpoint")
+		return
+	}
+
+	if !scenario.Enabled {
+		t.Errorf("error scenario should be enabled by default when endpoint and error are provided, got enabled=%v", scenario.Enabled)
+	}
+	if scenario.ErrorCode != "unauthorized_client" {
+		t.Errorf("wrong error code stored: got %v want %v", scenario.ErrorCode, "unauthorized_client")
+	}
+}
+
+func TestConfigHandler_ErrorScenarioExplicitlyDisabled(t *testing.T) {
+	// Setup
+	mockStore := newMockStore()
+	defaultUser := models.NewDefaultUser()
+	handler := NewConfigHandler(mockStore, defaultUser)
+
+	// Test case where enabled is explicitly set to false
+	configReq := ConfigRequest{
+		ErrorScenario: &ErrorScenario{
+			Enabled:          boolPtr(false), // Explicitly disabled
+			Endpoint:         "authorize",
+			Error:            "access_denied",
+			ErrorDescription: "Should not be active",
+		},
+	}
+	reqBody, _ := json.Marshal(configReq)
+	req := httptest.NewRequest("POST", "/config", bytes.NewBuffer(reqBody))
+	rr := httptest.NewRecorder()
+
+	// Call handler
+	handler.ServeHTTP(rr, req)
+
+	// Check response code
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify error scenario is stored but NOT enabled
+	scenario, exists := mockStore.GetErrorScenario("authorize")
+	if exists {
+		t.Errorf("error scenario should not be returned when disabled, but got: %+v", scenario)
 	}
 }
