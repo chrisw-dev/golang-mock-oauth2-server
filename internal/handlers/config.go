@@ -85,6 +85,10 @@ func (h *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Store error scenario if provided
 	if config.ErrorScenario != nil {
 		h.storeErrorScenario(*config.ErrorScenario)
+		log.Printf("Configured error scenario: endpoint=%s, error=%s, enabled=%v",
+			config.ErrorScenario.Endpoint,
+			config.ErrorScenario.Error,
+			config.ErrorScenario.Enabled)
 	}
 
 	// Return success response
@@ -125,6 +129,9 @@ func (h *ConfigHandler) storeErrorScenario(scenario ErrorScenario) {
 		ErrorCode:   scenario.Error,
 		Description: scenario.ErrorDescription,
 	}
+
+	log.Printf("Storing error scenario: endpoint=%s, error=%s, enabled=%t, status_code=%d",
+		storeScenario.Endpoint, storeScenario.ErrorCode, storeScenario.Enabled, storeScenario.StatusCode)
 
 	// Store the error scenario in the store
 	h.store.StoreErrorScenario(storeScenario)
