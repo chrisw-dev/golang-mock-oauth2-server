@@ -34,9 +34,9 @@ type ConfigRequest struct {
 
 // ErrorScenario defines an error condition to simulate
 type ErrorScenario struct {
-	Enabled          bool   `json:"enabled"`  // Whether the error scenario is enabled
-	Endpoint         string `json:"endpoint"` // Which endpoint should return an error (authorize, token, userinfo)
-	Error            string `json:"error"`    // OAuth2 error code
+	Enabled          *bool  `json:"enabled,omitempty"` // Whether the error scenario is enabled (defaults to true if not specified)
+	Endpoint         string `json:"endpoint"`          // Which endpoint should return an error (authorize, token, userinfo)
+	Error            string `json:"error"`             // OAuth2 error code
 	ErrorDescription string `json:"error_description,omitempty"`
 }
 
@@ -109,9 +109,17 @@ func (h *ConfigHandler) storeTokenConfig(tokenConfig map[string]interface{}) {
 
 // storeErrorScenario saves error scenario configuration to the store
 func (h *ConfigHandler) storeErrorScenario(scenario ErrorScenario) {
+	// Default enabled to true when an error scenario is being configured
+	// If Enabled is nil (not provided), default to true
+	// If Enabled is explicitly set (true or false), use that value
+	enabled := true
+	if scenario.Enabled != nil {
+		enabled = *scenario.Enabled
+	}
+
 	// Convert from handlers.ErrorScenario to types.ErrorScenario
 	storeScenario := types.ErrorScenario{
-		Enabled:     scenario.Enabled,
+		Enabled:     enabled,
 		Endpoint:    scenario.Endpoint,
 		StatusCode:  determineStatusCode(scenario.Error),
 		ErrorCode:   scenario.Error,
