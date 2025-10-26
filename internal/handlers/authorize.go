@@ -29,7 +29,15 @@ func (h *AuthorizeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if there's an error scenario configured for the authorize endpoint
+	// Check if there's an error scenario configured for the authorize endpoint.
+	// If an error scenario is configured and enabled for this endpoint, we return
+	// an OAuth2 error response by redirecting to the redirect_uri with error parameters
+	// instead of proceeding with the normal authorization code flow.
+	//
+	// The error response follows the OAuth2 specification (RFC 6749 Section 4.1.2.1):
+	//   - error: OAuth2 error code (e.g., "access_denied", "invalid_scope")
+	//   - error_description: Human-readable error description (optional)
+	//   - state: The state parameter from the original request (if provided)
 	if errorScenario, exists := h.Store.GetErrorScenario("authorize"); exists {
 		// Redirect to the provided redirect URI with error parameters
 		redirectURL, err := url.Parse(redirectURI)
