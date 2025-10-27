@@ -494,3 +494,354 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 		}
 	})
 }
+
+// TestErrorScenarioEdgeCases tests various edge cases for error scenario configuration
+// to ensure robust behavior in all situations
+func TestErrorScenarioEdgeCases(t *testing.T) {
+	mockServer := server.NewServer(":0")
+	ts := httptest.NewServer(mockServer.Handler)
+	defer ts.Close()
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	queryParams := url.Values{
+		"client_id":     {"test-client"},
+		"redirect_uri":  {"http://localhost/callback"},
+		"scope":         {"openid"},
+		"response_type": {"code"},
+		"state":         {"test-state"},
+	}
+
+	t.Run("Error scenario without enabled field defaults to true", func(t *testing.T) {
+		// Configure error without specifying enabled field
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"endpoint":          "authorize",
+				"error":             "invalid_scope",
+				"error_description": "Scope not allowed",
+			},
+		}
+
+		reqBody, _ := json.Marshal(configReq)
+		resp, err := http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+		resp.Body.Close()
+
+		// Verify authorization fails with error
+		authURL := ts.URL + "/authorize?" + queryParams.Encode()
+		authResp, err := client.Get(authURL)
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		defer authResp.Body.Close()
+
+		location := authResp.Header.Get("Location")
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+
+		if redirectURL.Query().Get("error") != "invalid_scope" {
+			t.Errorf("Expected error 'invalid_scope', got %q", redirectURL.Query().Get("error"))
+		}
+	})
+
+	t.Run("Switching between different error codes for same endpoint", func(t *testing.T) {
+		// First error
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"endpoint": "authorize",
+				"error":    "access_denied",
+			},
+		}
+		reqBody, err := json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+
+		// Verify first error
+		authResp, err := client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location := authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+		if redirectURL.Query().Get("error") != "access_denied" {
+			t.Errorf("Expected first error 'access_denied', got %q", redirectURL.Query().Get("error"))
+		}
+
+		// Switch to different error
+		configReq["error_scenario"] = map[string]interface{}{
+			"endpoint": "authorize",
+			"error":    "server_error",
+		}
+		reqBody, err = json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post second config: %v", err)
+		}
+
+		// Verify second error
+		authResp, err = client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location = authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in second response")
+		}
+		redirectURL, err = url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse second redirect URL: %v", err)
+		}
+		if redirectURL.Query().Get("error") != "server_error" {
+			t.Errorf("Expected second error 'server_error', got %q", redirectURL.Query().Get("error"))
+		}
+	})
+
+	t.Run("Explicitly setting enabled to true works", func(t *testing.T) {
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"enabled":  true,
+				"endpoint": "authorize",
+				"error":    "temporarily_unavailable",
+			},
+		}
+
+		reqBody, err := json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+
+		authResp, err := client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location := authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+
+		if redirectURL.Query().Get("error") != "temporarily_unavailable" {
+			t.Errorf("Expected error 'temporarily_unavailable', got %q", redirectURL.Query().Get("error"))
+		}
+	})
+
+	t.Run("Re-enabling after disabling works", func(t *testing.T) {
+		// Enable error
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"endpoint": "authorize",
+				"error":    "unauthorized_client",
+			},
+		}
+		reqBody, err := json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+
+		// Verify error is active
+		authResp, err := client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location := authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+		if redirectURL.Query().Get("error") == "" {
+			t.Error("Expected error to be active")
+		}
+
+		// Disable error
+		configReq["error_scenario"] = map[string]interface{}{
+			"enabled":  false,
+			"endpoint": "authorize",
+		}
+		reqBody, err = json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal disable config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post disable config: %v", err)
+		}
+
+		// Verify auth works now
+		authResp, err = client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize after disable: %v", err)
+		}
+		location = authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header after disable")
+		}
+		redirectURL, err = url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL after disable: %v", err)
+		}
+		if redirectURL.Query().Get("code") == "" {
+			t.Error("Expected auth code after disabling error")
+		}
+
+		// Re-enable with new error
+		configReq["error_scenario"] = map[string]interface{}{
+			"endpoint": "authorize",
+			"error":    "invalid_request",
+		}
+		reqBody, err = json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal re-enable config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post re-enable config: %v", err)
+		}
+
+		// Verify new error is active
+		authResp, err = client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize after re-enable: %v", err)
+		}
+		location = authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header after re-enable")
+		}
+		redirectURL, err = url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL after re-enable: %v", err)
+		}
+		if redirectURL.Query().Get("error") != "invalid_request" {
+			t.Errorf("Expected re-enabled error 'invalid_request', got %q", redirectURL.Query().Get("error"))
+		}
+	})
+
+	t.Run("Error description is optional", func(t *testing.T) {
+		// Configure error without description
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"endpoint": "authorize",
+				"error":    "access_denied",
+			},
+		}
+
+		reqBody, err := json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+
+		authResp, err := client.Get(ts.URL + "/authorize?" + queryParams.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location := authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+
+		// Should have error but no description
+		if redirectURL.Query().Get("error") != "access_denied" {
+			t.Errorf("Expected error 'access_denied'")
+		}
+		if redirectURL.Query().Get("error_description") != "" {
+			t.Errorf("Expected no error_description, got %q", redirectURL.Query().Get("error_description"))
+		}
+	})
+
+	t.Run("State parameter is preserved in error response", func(t *testing.T) {
+		configReq := map[string]interface{}{
+			"error_scenario": map[string]interface{}{
+				"endpoint": "authorize",
+				"error":    "access_denied",
+			},
+		}
+
+		reqBody, err := json.Marshal(configReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal config: %v", err)
+		}
+		_, err = http.Post(ts.URL+"/config", "application/json", bytes.NewBuffer(reqBody))
+		if err != nil {
+			t.Fatalf("Failed to post config: %v", err)
+		}
+
+		paramsWithState := url.Values{
+			"client_id":     {"test-client"},
+			"redirect_uri":  {"http://localhost/callback"},
+			"scope":         {"openid"},
+			"response_type": {"code"},
+			"state":         {"my-unique-state-12345"},
+		}
+
+		authResp, err := client.Get(ts.URL + "/authorize?" + paramsWithState.Encode())
+		if err != nil {
+			t.Fatalf("Failed to call authorize: %v", err)
+		}
+		location := authResp.Header.Get("Location")
+		authResp.Body.Close()
+		if location == "" {
+			t.Fatalf("No Location header in response")
+		}
+		redirectURL, err := url.Parse(location)
+		if err != nil {
+			t.Fatalf("Failed to parse redirect URL: %v", err)
+		}
+
+		if redirectURL.Query().Get("state") != "my-unique-state-12345" {
+			t.Errorf("Expected state 'my-unique-state-12345', got %q", redirectURL.Query().Get("state"))
+		}
+	})
+}

@@ -33,6 +33,24 @@ type ConfigRequest struct {
 }
 
 // ErrorScenario defines an error condition to simulate
+//
+// When an error scenario is configured for an endpoint, that endpoint will return
+// an OAuth2 error response instead of proceeding with the normal authentication flow.
+//
+// The Enabled field uses a pointer to bool (*bool) to distinguish between three states:
+//   - nil (field not provided in JSON): defaults to true - error scenario is enabled
+//   - true (explicitly set): error scenario is enabled
+//   - false (explicitly set): error scenario is disabled
+//
+// This allows clients to:
+//   1. Enable an error by just providing endpoint and error fields
+//   2. Explicitly enable with "enabled": true
+//   3. Disable a previously configured error with "enabled": false
+//
+// Example usage:
+//   Enable error (implicit): {"endpoint": "authorize", "error": "access_denied"}
+//   Enable error (explicit): {"endpoint": "authorize", "error": "access_denied", "enabled": true}
+//   Disable error: {"endpoint": "authorize", "enabled": false}
 type ErrorScenario struct {
 	Enabled          *bool  `json:"enabled,omitempty"` // Whether the error scenario is enabled (defaults to true if not specified)
 	Endpoint         string `json:"endpoint"`          // Which endpoint should return an error (authorize, token, userinfo)
@@ -85,6 +103,10 @@ func (h *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Store error scenario if provided
 	if config.ErrorScenario != nil {
 		h.storeErrorScenario(*config.ErrorScenario)
+		log.Printf("Configured error scenario: endpoint=%s, error=%s, enabled=%v",
+			config.ErrorScenario.Endpoint,
+			config.ErrorScenario.Error,
+			config.ErrorScenario.Enabled)
 	}
 
 	// Return success response
@@ -108,6 +130,18 @@ func (h *ConfigHandler) storeTokenConfig(tokenConfig map[string]interface{}) {
 }
 
 // storeErrorScenario saves error scenario configuration to the store
+//
+// This function handles the defaulting logic for the Enabled field:
+//   - If scenario.Enabled is nil (not provided in JSON), it defaults to true
+//   - If scenario.Enabled is not nil, it uses the explicit value (true or false)
+//
+// The function also determines the appropriate HTTP status code based on the
+// OAuth2 error code and creates a types.ErrorScenario that is stored in the store.
+//
+// Note: The store only maintains ONE error scenario at a time. If multiple error
+// scenarios are configured for different endpoints, the last one configured will
+// overwrite any previous configurations. This is by design for simplicity in a
+// mock server context.
 func (h *ConfigHandler) storeErrorScenario(scenario ErrorScenario) {
 	// Default enabled to true when an error scenario is being configured
 	// If Enabled is nil (not provided), default to true
@@ -125,6 +159,9 @@ func (h *ConfigHandler) storeErrorScenario(scenario ErrorScenario) {
 		ErrorCode:   scenario.Error,
 		Description: scenario.ErrorDescription,
 	}
+
+	log.Printf("Storing error scenario: endpoint=%s, error=%s, enabled=%t, status_code=%d",
+		storeScenario.Endpoint, storeScenario.ErrorCode, storeScenario.Enabled, storeScenario.StatusCode)
 
 	// Store the error scenario in the store
 	h.store.StoreErrorScenario(storeScenario)
