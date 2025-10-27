@@ -90,8 +90,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Check if tag already exists locally or remotely
-          if git rev-parse "${{ steps.next_version.outputs.version }}" >/dev/null 2>&1; then
+          # Check if tag already exists locally
+          if git tag -l "${{ steps.next_version.outputs.version }}" | grep -q .; then
             echo "Tag ${{ steps.next_version.outputs.version }} already exists locally"
             echo "tag_created=false" >> $GITHUB_OUTPUT
             exit 0
@@ -111,6 +111,7 @@ jobs:
           echo "tag_created=true" >> $GITHUB_OUTPUT
       
       - name: Create GitHub Release
+        if: steps.create_tag.outputs.tag_created == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.next_version.outputs.version }}
