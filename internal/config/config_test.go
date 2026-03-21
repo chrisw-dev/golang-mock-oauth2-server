@@ -1,22 +1,16 @@
 package config
 
 import (
-	"os"
 	"testing"
 )
 
 func TestLoadConfig(t *testing.T) {
 	// Set environment variables for testing
-	os.Setenv("MOCK_OAUTH_PORT", "9090")
-	os.Setenv("MOCK_USER_EMAIL", "test@example.com")
-	os.Setenv("MOCK_USER_NAME", "Test User")
-	os.Setenv("MOCK_TOKEN_EXPIRY", "7200")
-	os.Setenv("MOCK_ISSUER_URL", "http://mock-oauth2:9090")
-	defer os.Unsetenv("MOCK_OAUTH_PORT")
-	defer os.Unsetenv("MOCK_USER_EMAIL")
-	defer os.Unsetenv("MOCK_USER_NAME")
-	defer os.Unsetenv("MOCK_TOKEN_EXPIRY")
-	defer os.Unsetenv("MOCK_ISSUER_URL")
+	t.Setenv("MOCK_OAUTH_PORT", "9090")
+	t.Setenv("MOCK_USER_EMAIL", "test@example.com")
+	t.Setenv("MOCK_USER_NAME", "Test User")
+	t.Setenv("MOCK_TOKEN_EXPIRY", "7200")
+	t.Setenv("MOCK_ISSUER_URL", "http://mock-oauth2:9090")
 
 	config := LoadConfig()
 
