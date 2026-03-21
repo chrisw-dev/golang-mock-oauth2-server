@@ -14,6 +14,23 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
+func TestTokenHandler_OversizedBody(t *testing.T) {
+	mockStore := store.NewMemoryStore()
+	handler := NewTokenHandler(mockStore)
+
+	// Build a body that exceeds the 1MB limit (1MB + 1 byte)
+	oversizedBody := strings.Repeat("a", 1<<20+1)
+	req := httptest.NewRequest("POST", "/token", strings.NewReader(oversizedBody))
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d for oversized body, got %d", http.StatusBadRequest, rr.Code)
+	}
+}
+
 func TestTokenHandler(t *testing.T) {
 	// Setup mock store
 	mockStore := store.NewMemoryStore()
