@@ -23,7 +23,7 @@ This mock server recreates Google's OAuth2 flow without requiring an internet co
 
 ## Installation
 Prerequisites
-- Go 1.23 or higher
+- Go 1.25 or higher
 
 ## Getting Started
 

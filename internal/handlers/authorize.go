@@ -88,8 +88,8 @@ func (h *AuthorizeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	redirectURL.RawQuery = query.Encode()
 
 	// Added logging to debug query parameters and response status.
-	log.Printf("Received request with query parameters: client_id=%s, redirect_uri=%s, scope=%s, response_type=%s, state=%s", clientID, redirectURI, scope, responseType, state)
-	log.Printf("Returning redirect to: %s", redirectURL.String())
+	log.Printf("Received request with query parameters: client_id=%s, redirect_uri=%s, scope=%s, response_type=%s, state=%s", sanitizeLog(clientID), sanitizeLog(redirectURI), sanitizeLog(scope), sanitizeLog(responseType), sanitizeLog(state)) // #nosec G706 -- sanitizeLog strips CR/LF to prevent log injection
+	log.Printf("Returning redirect to: %s", sanitizeLog(redirectURL.String())) // #nosec G706 -- sanitizeLog strips CR/LF to prevent log injection
 
 	http.Redirect(w, r, redirectURL.String(), http.StatusFound)
 }

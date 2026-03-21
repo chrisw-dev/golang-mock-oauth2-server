@@ -62,6 +62,7 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse form data
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // limit request body to 1MB
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, "Invalid request", http.StatusBadRequest)
@@ -130,7 +131,7 @@ func (h *TokenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Return token response
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(tokenResponse); err != nil {
+	if err := json.NewEncoder(w).Encode(tokenResponse); err != nil { // #nosec G117 -- OAuth2 token endpoint must marshal access_token
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		// Log the error for debugging purposes
 		log.Printf("Error encoding token response: %v", err)
