@@ -9,6 +9,7 @@ import (
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
+
 // UserInfoHandler handles requests to the OAuth2 userinfo endpoint
 type UserInfoHandler struct {
 	Store *store.MemoryStore
@@ -68,13 +69,6 @@ func (h *UserInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-}
-
-var logSanitizer = strings.NewReplacer("\n", "", "\r", "")
-
-// sanitizeLog strips newline and carriage-return characters to prevent log injection.
-func sanitizeLog(s string) string {
-	return logSanitizer.Replace(s)
 }
 
 // maskToken hides most of the token for security in logs
