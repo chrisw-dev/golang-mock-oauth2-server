@@ -9,7 +9,6 @@ import (
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
-
 // UserInfoHandler handles requests to the OAuth2 userinfo endpoint
 type UserInfoHandler struct {
 	Store *store.MemoryStore
