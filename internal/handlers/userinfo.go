@@ -70,9 +70,11 @@ func (h *UserInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var logSanitizer = strings.NewReplacer("\n", "", "\r", "")
+
 // sanitizeLog strips newline and carriage-return characters to prevent log injection.
 func sanitizeLog(s string) string {
-	return strings.NewReplacer("\n", "", "\r", "").Replace(s)
+	return logSanitizer.Replace(s)
 }
 
 // maskToken hides most of the token for security in logs
