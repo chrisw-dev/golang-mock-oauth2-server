@@ -48,7 +48,7 @@ func TestOAuthFlow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get auth URL: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Check redirect to callback with code
 	if resp.StatusCode != http.StatusFound {
@@ -99,7 +99,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call authorize endpoint: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusFound {
 			t.Errorf("Expected status %d, got %d", http.StatusFound, resp.StatusCode)
@@ -142,7 +142,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to post config: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status %d from config endpoint, got %d", http.StatusOK, resp.StatusCode)
@@ -164,7 +164,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call authorize endpoint: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusFound {
 			t.Errorf("Expected status %d, got %d", http.StatusFound, resp.StatusCode)
@@ -210,7 +210,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to post config: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status %d from config endpoint, got %d", http.StatusOK, resp.StatusCode)
@@ -223,7 +223,7 @@ func TestErrorScenarioIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call authorize endpoint: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusFound {
 			t.Errorf("Expected status %d, got %d", http.StatusFound, resp.StatusCode)
@@ -276,7 +276,7 @@ func TestTokenEndpointErrorScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get authorization code: %v", err)
 	}
-	defer authResp.Body.Close()
+	defer func() { _ = authResp.Body.Close() }()
 
 	location := authResp.Header.Get("Location")
 	redirectURL, _ := url.Parse(location)
@@ -298,7 +298,7 @@ func TestTokenEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to exchange token: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
@@ -329,7 +329,7 @@ func TestTokenEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to post config: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected config to succeed, got status %d", resp.StatusCode)
@@ -342,7 +342,7 @@ func TestTokenEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to get authorization code: %v", err)
 		}
-		defer authResp2.Body.Close()
+		defer func() { _ = authResp2.Body.Close() }()
 
 		location2 := authResp2.Header.Get("Location")
 		redirectURL2, _ := url.Parse(location2)
@@ -360,7 +360,7 @@ func TestTokenEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call token endpoint: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusBadRequest {
 			t.Errorf("Expected status %d for invalid_grant, got %d", http.StatusBadRequest, resp.StatusCode)
@@ -407,7 +407,7 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get authorization code: %v", err)
 	}
-	defer authResp.Body.Close()
+	defer func() { _ = authResp.Body.Close() }()
 
 	location := authResp.Header.Get("Location")
 	redirectURL, _ := url.Parse(location)
@@ -425,7 +425,7 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get token: %v", err)
 	}
-	defer tokenResp.Body.Close()
+	defer func() { _ = tokenResp.Body.Close() }()
 
 	var tokenData map[string]interface{}
 	if err := json.NewDecoder(tokenResp.Body).Decode(&tokenData); err != nil {
@@ -441,7 +441,7 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call userinfo: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected status %d, got %d", http.StatusOK, resp.StatusCode)
@@ -463,7 +463,7 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to post config: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("Expected config to succeed, got status %d", resp.StatusCode)
@@ -478,7 +478,7 @@ func TestUserInfoEndpointErrorScenario(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call userinfo: %v", err)
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusInternalServerError {
 			t.Errorf("Expected status %d for server_error, got %d", http.StatusInternalServerError, resp.StatusCode)
@@ -531,7 +531,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to post config: %v", err)
 		}
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		// Verify authorization fails with error
 		authURL := ts.URL + "/authorize?" + queryParams.Encode()
@@ -539,7 +539,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
-		defer authResp.Body.Close()
+		defer func() { _ = authResp.Body.Close() }()
 
 		location := authResp.Header.Get("Location")
 		if location == "" {
@@ -578,7 +578,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location := authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in response")
 		}
@@ -610,7 +610,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location = authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in second response")
 		}
@@ -646,7 +646,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location := authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in response")
 		}
@@ -683,7 +683,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location := authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in response")
 		}
@@ -715,7 +715,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize after disable: %v", err)
 		}
 		location = authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header after disable")
 		}
@@ -747,7 +747,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize after re-enable: %v", err)
 		}
 		location = authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header after re-enable")
 		}
@@ -783,7 +783,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location := authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in response")
 		}
@@ -831,7 +831,7 @@ func TestErrorScenarioEdgeCases(t *testing.T) {
 			t.Fatalf("Failed to call authorize: %v", err)
 		}
 		location := authResp.Header.Get("Location")
-		authResp.Body.Close()
+		_ = authResp.Body.Close()
 		if location == "" {
 			t.Fatalf("No Location header in response")
 		}
