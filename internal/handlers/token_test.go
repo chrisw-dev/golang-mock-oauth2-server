@@ -14,12 +14,14 @@ import (
 	jwtlib "github.com/golang-jwt/jwt/v5"
 )
 
+const tokenRequestBodyLimit = 1 << 20
+
 func TestTokenHandler_OversizedBody(t *testing.T) {
 	mockStore := store.NewMemoryStore()
 	handler := NewTokenHandler(mockStore)
 
-	// Build a body that exceeds the 1MB limit (1MB + 1 byte)
-	oversizedBody := strings.Repeat("a", 1<<20+1)
+	// Build a body that exceeds the 1MB limit (limit + 1 byte)
+	oversizedBody := strings.Repeat("a", tokenRequestBodyLimit+1)
 	req := httptest.NewRequest("POST", "/token", strings.NewReader(oversizedBody))
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
