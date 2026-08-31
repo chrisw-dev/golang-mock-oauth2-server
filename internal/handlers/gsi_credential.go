@@ -39,14 +39,26 @@ type gisCredentialResponse struct {
 
 // ServeHTTP handles requests for mock GIS credentials
 func (h *GISCredentialHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	if r.Method != http.MethodPost && r.Method != http.MethodOptions {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	origin := r.Header.Get("Origin")
 	if !h.isAllowedOrigin(r) {
-		log.Printf("GSI credential request rejected: disallowed origin %s", sanitizeLog(r.Header.Get("Origin"))) // #nosec G706 -- sanitizeLog strips CR/LF to prevent log injection
+		log.Printf("GSI credential request rejected: disallowed origin %s", sanitizeLog(origin)) // #nosec G706 -- sanitizeLog strips CR/LF to prevent log injection
 		http.Error(w, "Forbidden - Origin not allowed", http.StatusForbidden)
+		return
+	}
+
+	if origin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Add("Vary", "Origin")
+	}
+	if r.Method == http.MethodOptions {
+		w.Header().Set("Access-Control-Allow-Methods", http.MethodPost)
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
