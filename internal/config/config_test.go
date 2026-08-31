@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 )
 
@@ -100,6 +101,22 @@ func TestLoadConfig_GISAllowedOrigins(t *testing.T) {
 		if config.GISAllowedOrigins[i] != origin {
 			t.Errorf("expected origin[%d] to be %q, got %q", i, origin, config.GISAllowedOrigins[i])
 		}
+	}
+}
+
+func TestLoadConfig_GISAllowedOrigins_ResetsWhenUnset(t *testing.T) {
+	t.Setenv("MOCK_GIS_ALLOWED_ORIGINS", "http://localhost:3000")
+	if config := LoadConfig(); len(config.GISAllowedOrigins) == 0 {
+		t.Fatal("expected GISAllowedOrigins to be populated before unset")
+	}
+
+	if err := os.Unsetenv("MOCK_GIS_ALLOWED_ORIGINS"); err != nil {
+		t.Fatalf("failed to unset MOCK_GIS_ALLOWED_ORIGINS: %v", err)
+	}
+
+	config := LoadConfig()
+	if config.GISAllowedOrigins != nil {
+		t.Errorf("expected GISAllowedOrigins to be reset to nil once the env var is removed, got %v", config.GISAllowedOrigins)
 	}
 }
 

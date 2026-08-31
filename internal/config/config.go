@@ -67,6 +67,9 @@ func LoadConfig() *ServerConfig {
 
 	if allowedOrigins, exists := os.LookupEnv("MOCK_GIS_ALLOWED_ORIGINS"); exists {
 		config.GISAllowedOrigins = parseAllowedOrigins(allowedOrigins)
+	} else {
+		// Reset so a stale allow-list from an earlier load doesn't linger once the var is removed
+		config.GISAllowedOrigins = nil
 	}
 
 	return config
@@ -111,6 +114,13 @@ func (c *ServerConfig) GetConfig() ServerConfig {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Clone the slice so callers can't mutate the live config's backing array
+	var allowedOrigins []string
+	if c.GISAllowedOrigins != nil {
+		allowedOrigins = make([]string, len(c.GISAllowedOrigins))
+		copy(allowedOrigins, c.GISAllowedOrigins)
+	}
+
 	return ServerConfig{
 		Port:              c.Port,
 		MockUserEmail:     c.MockUserEmail,
@@ -118,6 +128,6 @@ func (c *ServerConfig) GetConfig() ServerConfig {
 		MockTokenExpiry:   c.MockTokenExpiry,
 		IssuerURL:         c.IssuerURL,
 		GISEnabled:        c.GISEnabled,
-		GISAllowedOrigins: c.GISAllowedOrigins,
+		GISAllowedOrigins: allowedOrigins,
 	}
 }
