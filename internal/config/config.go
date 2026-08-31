@@ -57,7 +57,8 @@ func LoadConfig() *ServerConfig {
 		config.IssuerURL = issuerURL
 	}
 
-	// GIS compatibility is opt-in and defaults to false on any parse error
+// GIS compatibility is opt-in and defaults to false on any parse error
+	config.GISEnabled = false
 	if gisEnabled, exists := os.LookupEnv("MOCK_GIS_ENABLED"); exists {
 		if parsedEnabled, err := strconv.ParseBool(gisEnabled); err == nil {
 			config.GISEnabled = parsedEnabled
