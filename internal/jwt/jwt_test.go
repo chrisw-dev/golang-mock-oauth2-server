@@ -262,13 +262,16 @@ func TestGenerateGISCredentialToken_AudienceMismatch(t *testing.T) {
 		t.Fatalf("Failed to generate GIS credential token: %v", err)
 	}
 
-	claims, err := VerifyToken(tokenString)
+publicKey, err := GetPublicKey()
 	if err != nil {
-		t.Fatalf("Failed to verify token: %v", err)
+		t.Fatalf("Failed to get public key: %v", err)
 	}
 
-	if claims["aud"] == "client-b" {
-		t.Error("Token issued for client-a should not have audience client-b")
+	_, err = jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return publicKey, nil
+	}, jwt.WithAudience("client-b"))
+	if err == nil {
+		t.Fatal("Token issued for client-a should fail validation for audience client-b")
 	}
 }
 
