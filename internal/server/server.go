@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/config"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/handlers"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
@@ -43,6 +44,16 @@ func NewServer(addr string) *Server {
 	mux.Handle("/jwks", jwksHandler)
 	mux.Handle("/.well-known/openid-configuration", openIDConfigHandler)
 	mux.Handle("/callback", callbackHandler)
+
+	// Add opt-in mock Google Identity Services credential-flow routes
+	cfg := config.LoadConfig()
+	if cfg.GISEnabled {
+		baseURL := cfg.IssuerURL
+		if baseURL == "" {
+			baseURL = "http://localhost" + addr
+		}
+		handlers.RegisterGISRoutes(mux, defaultUser, baseURL, cfg.GISAllowedOrigins)
+	}
 
 	return &Server{
 		Handler: mux,

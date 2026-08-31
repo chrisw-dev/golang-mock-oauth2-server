@@ -3,17 +3,20 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 )
 
 // ServerConfig holds configuration parameters for the OAuth2 server
 type ServerConfig struct {
-	Port            int
-	MockUserEmail   string
-	MockUserName    string
-	MockTokenExpiry int
-	IssuerURL       string
-	mu              sync.RWMutex
+	Port              int
+	MockUserEmail     string
+	MockUserName      string
+	MockTokenExpiry   int
+	IssuerURL         string
+	GISEnabled        bool
+	GISAllowedOrigins []string
+	mu                sync.RWMutex
 }
 
 var defaultConfig = ServerConfig{
@@ -22,6 +25,7 @@ var defaultConfig = ServerConfig{
 	MockUserName:    "Test User",
 	MockTokenExpiry: 3600,
 	IssuerURL:       "", // Will be auto-generated if not specified
+	GISEnabled:      false,
 }
 
 // LoadConfig loads server configuration from environment variables or returns defaults
@@ -53,7 +57,30 @@ func LoadConfig() *ServerConfig {
 		config.IssuerURL = issuerURL
 	}
 
+	// GIS compatibility is opt-in and defaults to false on any parse error
+	if gisEnabled, exists := os.LookupEnv("MOCK_GIS_ENABLED"); exists {
+		if parsedEnabled, err := strconv.ParseBool(gisEnabled); err == nil {
+			config.GISEnabled = parsedEnabled
+		}
+	}
+
+	if allowedOrigins, exists := os.LookupEnv("MOCK_GIS_ALLOWED_ORIGINS"); exists {
+		config.GISAllowedOrigins = parseAllowedOrigins(allowedOrigins)
+	}
+
 	return config
+}
+
+// parseAllowedOrigins splits a comma-separated origin list, trimming whitespace and empty entries
+func parseAllowedOrigins(raw string) []string {
+	var origins []string
+	for _, origin := range strings.Split(raw, ",") {
+		origin = strings.TrimSpace(origin)
+		if origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	return origins
 }
 
 // UpdateConfig updates the server configuration with values from the provided map
@@ -84,10 +111,12 @@ func (c *ServerConfig) GetConfig() ServerConfig {
 	defer c.mu.RUnlock()
 
 	return ServerConfig{
-		Port:            c.Port,
-		MockUserEmail:   c.MockUserEmail,
-		MockUserName:    c.MockUserName,
-		MockTokenExpiry: c.MockTokenExpiry,
-		IssuerURL:       c.IssuerURL,
+		Port:              c.Port,
+		MockUserEmail:     c.MockUserEmail,
+		MockUserName:      c.MockUserName,
+		MockTokenExpiry:   c.MockTokenExpiry,
+		IssuerURL:         c.IssuerURL,
+		GISEnabled:        c.GISEnabled,
+		GISAllowedOrigins: c.GISAllowedOrigins,
 	}
 }

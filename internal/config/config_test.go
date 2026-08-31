@@ -61,6 +61,48 @@ func TestUpdateConfig(t *testing.T) {
 	}
 }
 
+func TestLoadConfig_GISEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		setEnv   bool
+		expected bool
+	}{
+		{name: "not set defaults to false", setEnv: false, expected: false},
+		{name: "true", envValue: "true", setEnv: true, expected: true},
+		{name: "false", envValue: "false", setEnv: true, expected: false},
+		{name: "invalid value defaults to false", envValue: "not-a-bool", setEnv: true, expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv("MOCK_GIS_ENABLED", tt.envValue)
+			}
+			config := LoadConfig()
+			if config.GISEnabled != tt.expected {
+				t.Errorf("expected GISEnabled to be %v, got %v", tt.expected, config.GISEnabled)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_GISAllowedOrigins(t *testing.T) {
+	t.Setenv("MOCK_GIS_ALLOWED_ORIGINS", " http://localhost:3000 ,http://localhost:5173,")
+
+	config := LoadConfig()
+
+	expected := []string{"http://localhost:3000", "http://localhost:5173"}
+	if len(config.GISAllowedOrigins) != len(expected) {
+		t.Fatalf("expected %d allowed origins, got %d: %v", len(expected), len(config.GISAllowedOrigins), config.GISAllowedOrigins)
+	}
+	for i, origin := range expected {
+		if config.GISAllowedOrigins[i] != origin {
+			t.Errorf("expected origin[%d] to be %q, got %q", i, origin, config.GISAllowedOrigins[i])
+		}
+	}
+}
+
 func TestGetConfig(t *testing.T) {
 	config := LoadConfig()
 

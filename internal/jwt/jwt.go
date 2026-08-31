@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -85,6 +86,34 @@ func GenerateAccessToken(issuer, clientID, sub string, scopes []string) (string,
 		"exp":   now.Add(time.Hour).Unix(),
 		"iat":   now.Unix(),
 		"scope": scopes,
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = keyID
+
+	return token.SignedString(privateKey)
+}
+
+// GenerateGISCredentialToken creates a signed RS256 ID token for the mock Google Identity
+// Services credential-flow endpoint, reusing the same key pair and kid as /jwks.
+func GenerateGISCredentialToken(issuer, clientID string, user *models.UserInfo) (string, error) {
+	if privateKey == nil {
+		if err := InitKeys(); err != nil {
+			return "", err
+		}
+	}
+
+	now := time.Now()
+	claims := jwt.MapClaims{
+		"iss":            issuer,
+		"sub":            user.Sub,
+		"aud":            clientID,
+		"exp":            now.Add(time.Hour).Unix(),
+		"iat":            now.Unix(),
+		"email":          user.Email,
+		"email_verified": user.EmailVerified,
+		"name":           user.Name,
+		"picture":        user.Picture,
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
