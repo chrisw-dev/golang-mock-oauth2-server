@@ -8,8 +8,10 @@ import "net/http"
 const gisClientScript = `(function () {
   "use strict";
 
+  var credentialURL = new URL("/gsi/credential", document.currentScript.src).href;
+
   function requestCredential(clientID) {
-    return fetch("/gsi/credential", {
+    return fetch(credentialURL, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
