@@ -47,11 +47,13 @@ func NewServer(addr string) *Server {
 
 	// Add opt-in mock Google Identity Services credential-flow routes
 	cfg := config.LoadConfig()
-	if cfg.GISEnabled {
+if cfg.GISEnabled {
 		baseURL := cfg.IssuerURL
 		if baseURL == "" {
 			baseURL = "http://localhost" + addr
 		}
+		defaultUser.Email = cfg.MockUserEmail
+		defaultUser.Name = cfg.MockUserName
 		handlers.RegisterGISRoutes(mux, defaultUser, baseURL, cfg.GISAllowedOrigins)
 	}
 
