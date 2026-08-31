@@ -130,6 +130,12 @@ func TestGISCredentialHandler_OriginChecks(t *testing.T) {
 			expectedStatus: http.StatusForbidden,
 		},
 		{
+			name:           "matching host but mismatched scheme rejected",
+			host:           "localhost:8080",
+			origin:         "https://localhost:8080",
+			expectedStatus: http.StatusForbidden,
+		},
+		{
 			name:           "explicitly allowed origin accepted",
 			host:           "localhost:8080",
 			origin:         "http://localhost:5173",

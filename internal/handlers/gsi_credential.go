@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"net/url"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/jwt"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
@@ -94,15 +93,15 @@ func (h *GISCredentialHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 // isAllowedOrigin enforces same-origin access by default: requests without an Origin header
 // (e.g. same-origin browser requests, curl, tests) are allowed; cross-origin requests are
-// only allowed if they match the request host or an explicitly configured allowed origin.
+// only allowed if they match the request's full scheme+host origin or an explicitly
+// configured allowed origin.
 func (h *GISCredentialHandler) isAllowedOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true
 	}
 
-	parsedOrigin, err := url.Parse(origin)
-	if err == nil && parsedOrigin.Host == r.Host {
+	if origin == requestOrigin(r) {
 		return true
 	}
 
@@ -113,4 +112,14 @@ func (h *GISCredentialHandler) isAllowedOrigin(r *http.Request) bool {
 	}
 
 	return false
+}
+
+// requestOrigin reconstructs the scheme://host origin of the incoming request for
+// comparison against the browser-supplied Origin header (which includes the scheme).
+func requestOrigin(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host
 }
