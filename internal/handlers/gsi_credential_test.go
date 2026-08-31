@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/jwt"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 )
 
 func testGISUser() *models.UserInfo {
@@ -156,3 +158,37 @@ func TestGISCredentialHandler_OriginChecks(t *testing.T) {
 		})
 	}
 }
+
+// TestGISCredentialHandler_ConcurrentWithConfigUpdates guards against data races between
+// /config mutating the shared mock user in place and /gsi/credential reading it concurrently.
+func TestGISCredentialHandler_ConcurrentWithConfigUpdates(t *testing.T) {
+	user := testGISUser()
+	mockStore := store.NewMemoryStore()
+	configHandler := NewConfigHandler(mockStore, user)
+	credentialHandler := NewGISCredentialHandler(user, "http://localhost:8080", nil)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+			body, _ := json.Marshal(map[string]interface{}{
+				"user_info": map[string]interface{}{"name": "Concurrent User"},
+			})
+			req := httptest.NewRequest(http.MethodPost, "/config", bytes.NewReader(body))
+			rr := httptest.NewRecorder()
+			configHandler.ServeHTTP(rr, req)
+		}()
+
+		go func() {
+			defer wg.Done()
+			body, _ := json.Marshal(map[string]string{"client_id": "demo-local"})
+			req := httptest.NewRequest(http.MethodPost, "/gsi/credential", bytes.NewReader(body))
+			rr := httptest.NewRecorder()
+			credentialHandler.ServeHTTP(rr, req)
+		}()
+	}
+	wg.Wait()
+}
+

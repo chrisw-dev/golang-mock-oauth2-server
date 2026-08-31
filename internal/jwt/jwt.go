@@ -39,10 +39,8 @@ func InitKeys() error {
 
 // GenerateIDToken creates a signed JWT ID token
 func GenerateIDToken(issuer, clientID, sub, email, name string) (string, error) {
-	if privateKey == nil {
-		if err := InitKeys(); err != nil {
-			return "", err
-		}
+	if err := InitKeys(); err != nil {
+		return "", err
 	}
 
 	now := time.Now()
@@ -72,10 +70,8 @@ func GenerateIDToken(issuer, clientID, sub, email, name string) (string, error) 
 
 // GenerateAccessToken creates a signed JWT access token
 func GenerateAccessToken(issuer, clientID, sub string, scopes []string) (string, error) {
-	if privateKey == nil {
-		if err := InitKeys(); err != nil {
-			return "", err
-		}
+	if err := InitKeys(); err != nil {
+		return "", err
 	}
 
 	now := time.Now()
@@ -97,10 +93,8 @@ func GenerateAccessToken(issuer, clientID, sub string, scopes []string) (string,
 // GenerateGISCredentialToken creates a signed RS256 ID token for the mock Google Identity
 // Services credential-flow endpoint, reusing the same key pair and kid as /jwks.
 func GenerateGISCredentialToken(issuer, clientID string, user *models.UserInfo) (string, error) {
-	if privateKey == nil {
-		if err := InitKeys(); err != nil {
-			return "", err
-		}
+	if err := InitKeys(); err != nil {
+		return "", err
 	}
 
 	now := time.Now()
@@ -124,10 +118,8 @@ func GenerateGISCredentialToken(issuer, clientID string, user *models.UserInfo) 
 
 // GetJWKS returns the JSON Web Key Set
 func GetJWKS() (map[string]interface{}, error) {
-	if publicKey == nil {
-		if err := InitKeys(); err != nil {
-			return nil, err
-		}
+	if err := InitKeys(); err != nil {
+		return nil, err
 	}
 
 	// Encode the public key components
@@ -155,10 +147,8 @@ func GetJWKS() (map[string]interface{}, error) {
 
 // VerifyToken verifies a JWT token and returns the claims
 func VerifyToken(tokenString string) (jwt.MapClaims, error) {
-	if publicKey == nil {
-		if err := InitKeys(); err != nil {
-			return nil, err
-		}
+	if err := InitKeys(); err != nil {
+		return nil, err
 	}
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
@@ -192,20 +182,16 @@ func generateNonce() string {
 
 // GetPublicKey returns the public key (for testing purposes)
 func GetPublicKey() (*rsa.PublicKey, error) {
-	if publicKey == nil {
-		if err := InitKeys(); err != nil {
-			return nil, err
-		}
+	if err := InitKeys(); err != nil {
+		return nil, err
 	}
 	return publicKey, nil
 }
 
 // GetPublicKeyPEM returns the public key in PEM format
 func GetPublicKeyPEM() (string, error) {
-	if publicKey == nil {
-		if err := InitKeys(); err != nil {
-			return "", err
-		}
+	if err := InitKeys(); err != nil {
+		return "", err
 	}
 
 	pubKeyBytes, err := x509.MarshalPKIXPublicKey(publicKey)

@@ -74,7 +74,12 @@ func (h *GISCredentialHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	credential, err := jwt.GenerateGISCredentialToken(h.IssuerURL, req.ClientID, h.User)
+	// Snapshot the shared mock user under lock; /config may mutate it concurrently.
+	userMu.RLock()
+	user := h.User.Clone()
+	userMu.RUnlock()
+
+	credential, err := jwt.GenerateGISCredentialToken(h.IssuerURL, req.ClientID, user)
 	if err != nil {
 		log.Printf("Error generating GIS credential: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)

@@ -5,11 +5,16 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/store"
 	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/types"
 )
+
+// userMu guards the shared mock *models.UserInfo pointer against concurrent
+// mutation from ConfigHandler and concurrent reads from GISCredentialHandler.
+var userMu sync.RWMutex
 
 // ConfigHandler handles dynamic configuration of the mock OAuth2 server
 type ConfigHandler struct {
@@ -92,7 +97,9 @@ func (h *ConfigHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Update user info if provided
 	if config.UserInfo != nil {
+		userMu.Lock()
 		models.UpdateUserFromConfig(h.user, config.UserInfo)
+		userMu.Unlock()
 	}
 
 	// Store token configuration if provided
@@ -197,5 +204,7 @@ func determineStatusCode(errorCode string) int {
 
 // GetUserInfo returns the configured user info
 func (h *ConfigHandler) GetUserInfo() *models.UserInfo {
+	userMu.RLock()
+	defer userMu.RUnlock()
 	return h.user
 }
