@@ -350,6 +350,66 @@ Provides OpenID Connect (OIDC) configuration metadata for client auto-configurat
 }
 ```
 
+#### Mock Google Identity Services (GIS) Endpoints — development/test only
+
+**Disabled by default.** These routes emulate only the narrow browser credential-callback
+contract used by apps loading `https://accounts.google.com/gsi/client` — they are not a
+replacement for the real Google Identity Services SDK and must never be used in production.
+
+Enable with `MOCK_GIS_ENABLED=true`. When disabled (the default), both routes return `404`.
+
+##### `GET /gsi/client`
+
+Serves a small JavaScript compatibility script. It looks for an element with
+`id="g_id_onload"`, reads its `data-client_id` and `data-callback` attributes, and renders a
+sign-in control inside any `.g_id_signin` container. On activation it requests a credential
+from `/gsi/credential` and invokes `window[data-callback]({ credential: idToken })`, matching
+the shape produced by the real GIS SDK.
+
+```html
+<div id="g_id_onload"
+     data-client_id="my-app-local"
+     data-callback="handleCredentialResponse"></div>
+<div class="g_id_signin"></div>
+<script src="${MOCK_OAUTH_ISSUER}/gsi/client"></script>
+<script>
+  function handleCredentialResponse(response) {
+    // response.credential is a signed RS256 JWT
+    fetch("/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential: response.credential }),
+    });
+  }
+</script>
+```
+
+##### `POST /gsi/credential`
+
+Issues a signed RS256 ID token for the active mock user, signed with the same RSA key pair
+and `kid` served at `/jwks`.
+
+**Request Body**:
+
+```json
+{ "client_id": "my-app-local" }
+```
+
+**Response**:
+
+```json
+{ "credential": "<RS256 JWT>" }
+```
+
+The JWT contains `iss`, `sub`, `aud` (equal to the submitted `client_id`), `exp`, `iat`,
+`email`, `email_verified`, `name`, and `picture`, and must be validated by your application
+using the public JWK from `/jwks` with issuer equal to `MOCK_ISSUER_URL`.
+
+By default the endpoint only accepts same-origin requests (requests without an `Origin`
+header, or where `Origin` matches the request host). For cross-origin local development,
+add explicit origins via `MOCK_GIS_ALLOWED_ORIGINS` (comma-separated) — there is no wildcard
+`Access-Control-Allow-Origin: *` option.
+
 #### Configuration Endpoint
 
 ##### Dynamic Configuration Endpoint (`/config`)
@@ -450,6 +510,8 @@ Available configuration options:
   - `MOCK_USER_EMAIL` - Email for the mock user (default: testuser@example.com)
   - `MOCK_USER_NAME` - Name for the mock user (default: Test User)
   - `MOCK_TOKEN_EXPIRY` - Token expiry in seconds (default: 3600)
+  - `MOCK_GIS_ENABLED` - Enables the opt-in mock Google Identity Services routes (`/gsi/client`, `/gsi/credential`), development/test only (default: false)
+  - `MOCK_GIS_ALLOWED_ORIGINS` - Comma-separated list of additional origins allowed to call `/gsi/credential` cross-origin (default: none — same-origin only)
 
 The issuer URL is particularly important in containerized environments where the service name differs from "localhost". It affects the URLs returned in the OpenID Connect discovery document and needs to match what your OAuth client is configured to use.
 

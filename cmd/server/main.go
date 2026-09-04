@@ -81,6 +81,13 @@ func main() {
 	// Add JWKS endpoint
 	mux.Handle("/jwks", handlers.NewJWKSHandler())
 
+	// Add opt-in mock Google Identity Services credential-flow routes
+if cfg.GISEnabled {
+		defaultUser.Email = cfg.MockUserEmail
+		defaultUser.Name = cfg.MockUserName
+		handlers.RegisterGISRoutes(mux, defaultUser, baseURL, cfg.GISAllowedOrigins)
+	}
+
 	// Start the server with the custom ServeMux
 	startServer(serverPort, mux)
 }

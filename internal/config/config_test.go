@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 )
 
@@ -58,6 +59,64 @@ func TestUpdateConfig(t *testing.T) {
 	}
 	if config.IssuerURL != "http://updated-mock-oauth2:8081" {
 		t.Errorf("expected IssuerURL to be 'http://updated-mock-oauth2:8081', got '%s'", config.IssuerURL)
+	}
+}
+
+func TestLoadConfig_GISEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		setEnv   bool
+		expected bool
+	}{
+		{name: "not set defaults to false", setEnv: false, expected: false},
+		{name: "true", envValue: "true", setEnv: true, expected: true},
+		{name: "false", envValue: "false", setEnv: true, expected: false},
+		{name: "invalid value defaults to false", envValue: "not-a-bool", setEnv: true, expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv("MOCK_GIS_ENABLED", tt.envValue)
+			}
+			config := LoadConfig()
+			if config.GISEnabled != tt.expected {
+				t.Errorf("expected GISEnabled to be %v, got %v", tt.expected, config.GISEnabled)
+			}
+		})
+	}
+}
+
+func TestLoadConfig_GISAllowedOrigins(t *testing.T) {
+	t.Setenv("MOCK_GIS_ALLOWED_ORIGINS", " http://localhost:3000 ,http://localhost:5173,")
+
+	config := LoadConfig()
+
+	expected := []string{"http://localhost:3000", "http://localhost:5173"}
+	if len(config.GISAllowedOrigins) != len(expected) {
+		t.Fatalf("expected %d allowed origins, got %d: %v", len(expected), len(config.GISAllowedOrigins), config.GISAllowedOrigins)
+	}
+	for i, origin := range expected {
+		if config.GISAllowedOrigins[i] != origin {
+			t.Errorf("expected origin[%d] to be %q, got %q", i, origin, config.GISAllowedOrigins[i])
+		}
+	}
+}
+
+func TestLoadConfig_GISAllowedOrigins_ResetsWhenUnset(t *testing.T) {
+	t.Setenv("MOCK_GIS_ALLOWED_ORIGINS", "http://localhost:3000")
+	if config := LoadConfig(); len(config.GISAllowedOrigins) == 0 {
+		t.Fatal("expected GISAllowedOrigins to be populated before unset")
+	}
+
+	if err := os.Unsetenv("MOCK_GIS_ALLOWED_ORIGINS"); err != nil {
+		t.Fatalf("failed to unset MOCK_GIS_ALLOWED_ORIGINS: %v", err)
+	}
+
+	config := LoadConfig()
+	if config.GISAllowedOrigins != nil {
+		t.Errorf("expected GISAllowedOrigins to be reset to nil once the env var is removed, got %v", config.GISAllowedOrigins)
 	}
 }
 

@@ -2,7 +2,9 @@ package jwt
 
 import (
 	"testing"
+	"time"
 
+	"github.com/chrisw-dev/golang-mock-oauth2-server/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -186,6 +188,90 @@ func TestVerifyToken(t *testing.T) {
 	_, err = VerifyToken(invalidToken)
 	if err == nil {
 		t.Error("Expected error for invalid token")
+	}
+}
+
+func TestGenerateGISCredentialToken(t *testing.T) {
+	err := InitKeys()
+	if err != nil {
+		t.Fatalf("Failed to initialize keys: %v", err)
+	}
+
+	issuer := "http://localhost:8080"
+	clientID := "test-client-local"
+	user := &models.UserInfo{
+		Sub:           "123456789",
+		Name:          "Test User",
+		Email:         "testuser@example.com",
+		EmailVerified: true,
+		Picture:       "https://example.com/profile.jpg",
+	}
+
+	tokenString, err := GenerateGISCredentialToken(issuer, clientID, user)
+	if err != nil {
+		t.Fatalf("Failed to generate GIS credential token: %v", err)
+	}
+
+	if tokenString == "" {
+		t.Fatal("Token string should not be empty")
+	}
+
+	claims, err := VerifyToken(tokenString)
+	if err != nil {
+		t.Fatalf("Failed to verify token: %v", err)
+	}
+
+	if claims["iss"] != issuer {
+		t.Errorf("Expected issuer %s, got %v", issuer, claims["iss"])
+	}
+	if claims["aud"] != clientID {
+		t.Errorf("Expected audience %s, got %v", clientID, claims["aud"])
+	}
+	if claims["sub"] != user.Sub {
+		t.Errorf("Expected subject %s, got %v", user.Sub, claims["sub"])
+	}
+	if claims["email"] != user.Email {
+		t.Errorf("Expected email %s, got %v", user.Email, claims["email"])
+	}
+	if emailVerified, ok := claims["email_verified"].(bool); !ok || !emailVerified {
+		t.Errorf("Expected email_verified to be true, got %v", claims["email_verified"])
+	}
+	if claims["name"] != user.Name {
+		t.Errorf("Expected name %s, got %v", user.Name, claims["name"])
+	}
+	if claims["picture"] != user.Picture {
+		t.Errorf("Expected picture %s, got %v", user.Picture, claims["picture"])
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok || int64(exp) <= time.Now().Unix() {
+		t.Errorf("Expected exp to be in the future, got %v", claims["exp"])
+	}
+}
+
+func TestGenerateGISCredentialToken_AudienceMismatch(t *testing.T) {
+	err := InitKeys()
+	if err != nil {
+		t.Fatalf("Failed to initialize keys: %v", err)
+	}
+
+	user := &models.UserInfo{Sub: "123", Email: "testuser@example.com", Name: "Test User", EmailVerified: true}
+
+	tokenString, err := GenerateGISCredentialToken("http://localhost:8080", "client-a", user)
+	if err != nil {
+		t.Fatalf("Failed to generate GIS credential token: %v", err)
+	}
+
+publicKey, err := GetPublicKey()
+	if err != nil {
+		t.Fatalf("Failed to get public key: %v", err)
+	}
+
+	_, err = jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return publicKey, nil
+	}, jwt.WithAudience("client-b"))
+	if err == nil {
+		t.Fatal("Token issued for client-a should fail validation for audience client-b")
 	}
 }
 
